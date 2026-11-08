@@ -1,0 +1,74 @@
+/*
+ * Design tokens: the whole palette and type scale of the site.
+ *
+ * These are PLACEHOLDERS, chosen to be neutral and legible until the visual
+ * design is settled. To restyle the site, change the --anvil-* values below.
+ * The second half of the file maps them onto the variables Starlight reads,
+ * and shouldn't need to change.
+ *
+ * Starlight is dark by default; `[data-theme='light']` is the light theme.
+ */
+
+/* ---- Brand tokens --------------------------------------------------- */
+
+:root {
+  /* Type */
+  --anvil-font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --anvil-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --anvil-font-heading: var(--anvil-font-body);
+
+  /* Shape */
+  --anvil-radius: 0.5rem;
+
+  /* Colour, dark theme */
+  --anvil-accent-low: #3a1d0b;
+  --anvil-accent: #f08a3c;
+  --anvil-accent-high: #ffd9bd;
+
+  --anvil-surface: #121316;     /* page background */
+  --anvil-surface-raised: #1b1d21;
+  --anvil-text: #f2f2f3;
+  --anvil-text-muted: #b6b8bd;
+  --anvil-border: #33363c;
+
+  /* The three persona colours, used on the home page and section overviews. */
+  --anvil-persona-use: #6cb6ff;
+  --anvil-persona-run: #7ee2a8;
+  --anvil-persona-catalogs: #f5b85b;
+}
+
+:root[data-theme='light'] {
+  --anvil-accent-low: #ffe6d3;
+  --anvil-accent: #b4520f;
+  --anvil-accent-high: #5a2604;
+
+  --anvil-surface: #ffffff;
+  --anvil-surface-raised: #f6f6f7;
+  --anvil-text: #16171a;
+  --anvil-text-muted: #55585f;
+  --anvil-border: #dcdde0;
+
+  --anvil-persona-use: #1f6fbf;
+  --anvil-persona-run: #1d8a4e;
+  --anvil-persona-catalogs: #a8650c;
+}
+
+/* ---- Mapping onto Starlight ----------------------------------------- */
+/* https://starlight.astro.build/guides/css-and-tailwind/#theming        */
+
+:root,
+:root[data-theme='light'] {
+  --sl-font: var(--anvil-font-body);
+  --sl-font-mono: var(--anvil-font-mono);
+
+  --sl-color-accent-low: var(--anvil-accent-low);
+  --sl-color-accent: var(--anvil-accent);
+  --sl-color-accent-high: var(--anvil-accent-high);
+
+  --sl-color-white: var(--anvil-text);        /* highest-contrast text */
+  --sl-color-gray-2: var(--anvil-text-muted);
+  --sl-color-gray-5: var(--anvil-border);
+  --sl-color-black: var(--anvil-surface);     /* page background */
+  --sl-color-bg-nav: var(--anvil-surface-raised);
+  --sl-color-bg-sidebar: var(--anvil-surface);
+}

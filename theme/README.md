@@ -1,0 +1,44 @@
+# Theme
+
+Everything about how the site **looks** lives in this directory, and
+nothing about what it **says** or how it's **organized** does. Restyle the
+site by changing files here only.
+
+| File | What it controls |
+| --- | --- |
+| [`tokens.css`](tokens.css) | The palette, fonts and radius, for dark and light themes, as `--anvil-*` variables, and their mapping onto Starlight's `--sl-*` variables. Start here. |
+| [`base.css`](base.css) | Global rules that tokens can't express (heading font, table corners). Keep it small. |
+| [`components/`](components) | Markup and style for custom pieces: `PersonaCards.astro` (the home page's "where do you want to start" cards). Also where replacements for Starlight's own components go. |
+| [`assets/logo.svg`](assets/logo.svg) | The header logo (placeholder). Also copy it to `public/favicon.svg` for the browser tab. |
+| [`theme.config.mjs`](theme.config.mjs) | Wires the above into Starlight: logo, favicon, stylesheets, component overrides. |
+
+The current values are **placeholders**: neutral and legible, not a design.
+
+## Restyling (for example, with Claude Design)
+
+1. Give the design tool `tokens.css` and a screenshot or two of the running
+   site (`npm run dev`, then <http://localhost:4321/anvil-docs/>). Pages
+   worth showing: the home page, a persona overview (`/run/`), and a long
+   reference page (`/catalogs/contract/`), in both dark and light.
+2. Bring back new token values. Change only the `--anvil-*` block in
+   `tokens.css`; the mapping onto Starlight below it rarely needs to change.
+3. For a font: add the `@font-face` or Google Fonts `@import` at the top of
+   `tokens.css` (or a new `fonts.css` listed first in `theme.config.mjs`)
+   and set `--anvil-font-*`.
+4. For a change tokens can't make, such as a different header or footer,
+   override a Starlight component: write it in `components/` and register
+   it under `components` in `theme.config.mjs`. Starlight's list of
+   overridable components:
+   <https://starlight.astro.build/reference/overrides/>.
+
+## Rules
+
+- No colours, font names or sizes outside `tokens.css`. Components and
+  `base.css` use variables.
+- Every colour has a dark value (`:root`) and a light value
+  (`:root[data-theme='light']`). Check both: the theme picker is in the
+  header.
+- The three persona colours (`--anvil-persona-use`, `-run`, `-catalogs`)
+  identify the three audiences wherever they appear.
+- Content pages don't carry styling. If a page needs a visual element, add a
+  component here and use it from the page.

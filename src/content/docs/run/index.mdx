@@ -1,0 +1,41 @@
+---
+title: Run Anvil
+description: For platform engineers who deploy, configure and upgrade the Anvil server.
+---
+
+import { LinkCard, CardGrid, Steps } from '@astrojs/starlight/components';
+
+Anvil is a single `anvil` binary. `anvil server` runs the API and a pool of
+workers; Terraform provisions everything, one root module and state per
+service. What a service and each cloud are made of comes from a
+[catalog](../catalogs/), which you choose and pin.
+
+## From a laptop to production
+
+<Steps>
+
+1. **Try it locally.** With Terraform on your `PATH`, the GitHub CLI
+   signed in and a catalog cloned beside an Anvil checkout,
+   `ANVIL_CATALOG=../anvil-catalog go run ./cmd/anvil server` runs a dev
+   server on your own token. See [Running the server](server/).
+
+2. **Give Anvil its own GitHub identity.** A deployed server signs in as a
+   GitHub App, not a person. See [GitHub App](github-app/).
+
+3. **Write the configuration file.** One reviewable HCL file: data
+   directory, the App, the Terraform state bucket, the catalog source and
+   its settings. See the [configuration file reference](configuration/).
+
+4. **Say where clouds land.** Create a cloud binding per provider, such as
+   the shared GCP project for Cloud Run. See
+   [Cloud Run setup](cloud-run/).
+
+5. **Upgrade deliberately.** Read the changelog's breaking changes before
+   moving to a new release. See [Releases and upgrades](releases/).
+
+</Steps>
+
+<CardGrid>
+  <LinkCard title="Running the server" href="server/" description="Configuration, settings, bindings and credentials." />
+  <LinkCard title="Decisions and limitations" href="../concepts/decisions/" description="What the current release does and doesn't do." />
+</CardGrid>

@@ -1,0 +1,62 @@
+# Template for an upstream repository (such as Laratechs/anvil): copy it to
+# .github/workflows/publish-docs.yml there. On every push to main it mirrors
+# the docs this site uses into anvil-docs/upstream/<source>/ and pushes the
+# result to anvil-docs' main, which publishes the site.
+#
+# Needs a secret ANVIL_DOCS_TOKEN in the upstream repository: a fine-grained
+# token (or GitHub App installation token) with Contents: read and write on
+# Laratechs/anvil-docs only. A push with it triggers anvil-docs' Pages
+# workflow; a push with the default GITHUB_TOKEN would not.
+#
+# Set SOURCE to the upstream's key in anvil-docs' site.structure.mjs.
+name: publish-docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-docs
+  cancel-in-progress: false
+
+env:
+  SOURCE: anvil
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: upstream
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Laratechs/anvil-docs
+          token: ${{ secrets.ANVIL_DOCS_TOKEN }}
+          path: anvil-docs
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: anvil-docs/.nvmrc
+      - name: Mirror docs
+        run: >-
+          node anvil-docs/scripts/sync-upstream.mjs
+          --source "$SOURCE" --from upstream
+          --ref "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"
+      - name: Push to anvil-docs
+        working-directory: anvil-docs
+        run: |
+          git add "upstream/$SOURCE"
+          if git diff --cached --quiet; then
+            echo "Docs unchanged; nothing to publish."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "upstream($SOURCE): mirror ${GITHUB_REPOSITORY}@${GITHUB_SHA::12}" \
+            -m "From ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          git pull --rebase
+          git push

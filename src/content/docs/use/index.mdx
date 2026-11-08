@@ -1,0 +1,40 @@
+---
+title: Use Anvil
+description: For engineers who create and change services with Anvil.
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+You ask Anvil for a **service** by name. Anvil creates a GitHub repository
+with a working app and CI that publishes a versioned container image, and,
+if you ask, a **cloud** for it to run in, such as a Cloud Run service. Every
+request describes the state you want, so repeating one is always safe.
+
+Services have no owner: any active member of the GitHub organization can
+create, change, archive or restore any of them.
+
+## Before you start
+
+- Install the CLI: `go install github.com/Laratechs/anvil/cmd/anvil@latest`
+- Point it at your Anvil server: `export ANVIL_URL=https://anvil.example.com`
+- Sign in to GitHub with `gh auth login`. Anvil uses your token only to find
+  out who you are.
+
+## What you'll do
+
+| I want to… | Start with |
+| --- | --- |
+| Create a service | `anvil service create orders` |
+| Run it on Cloud Run | `anvil service create -cloud=gcp orders` |
+| See what I have | `anvil service get orders`, `anvil service list` |
+| Pick up a change I stopped waiting for | `anvil operation wait <id>` |
+| Archive it, and restore it later | `anvil service delete orders`, then `anvil service create orders` |
+
+Every command, option and exit code is in [Using the CLI](cli/).
+
+<CardGrid>
+  <LinkCard title="Using the CLI" href="cli/" description="Every command, with examples." />
+  <LinkCard title="Running on Cloud Run" href="cloud-run/" description="What Anvil creates in GCP and how your CI deploys." />
+  <LinkCard title="HTTP API" href="api/" description="The API the CLI is built on, for scripts and portals." />
+  <LinkCard title="How Anvil works" href="../concepts/how-it-works/" description="What happens between your command and a ready service." />
+</CardGrid>

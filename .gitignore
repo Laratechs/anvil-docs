@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.astro/
+# Generated from upstream/ by scripts/build-content.mjs
+src/content/docs/upstream/
+.DS_Store

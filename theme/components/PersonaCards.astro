@@ -1,0 +1,73 @@
+---
+// The "who are you?" cards on the home page: one per persona group in
+// site.structure.mjs. Words come from the structure; this file is only
+// markup and style.
+import { groups } from '~structure';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const personas = groups.filter((g) => g.persona);
+---
+
+<ul class="personas" role="list">
+  {
+    personas.map((g) => (
+      <li class="persona" data-persona={g.id}>
+        <a href={`${base}/${g.pages[0].slug}/`}>
+          <span class="persona-who">{g.persona}</span>
+          <span class="persona-title">{g.label}</span>
+          <span class="persona-summary">{g.summary}</span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .personas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+    padding: 0;
+    margin: 2rem 0;
+    list-style: none;
+  }
+  .persona {
+    --persona-color: var(--anvil-accent);
+    margin: 0;
+  }
+  .persona[data-persona='use'] { --persona-color: var(--anvil-persona-use); }
+  .persona[data-persona='run'] { --persona-color: var(--anvil-persona-run); }
+  .persona[data-persona='catalogs'] { --persona-color: var(--anvil-persona-catalogs); }
+
+  .persona a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    height: 100%;
+    padding: 1.25rem;
+    border: 1px solid var(--anvil-border);
+    border-top: 4px solid var(--persona-color);
+    border-radius: var(--anvil-radius);
+    background: var(--anvil-surface-raised);
+    color: var(--anvil-text);
+    text-decoration: none;
+  }
+  .persona a:hover,
+  .persona a:focus-visible {
+    border-color: var(--persona-color);
+  }
+  .persona-who {
+    font-size: var(--sl-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--persona-color);
+  }
+  .persona-title {
+    font-family: var(--anvil-font-heading);
+    font-size: var(--sl-text-xl);
+    font-weight: 600;
+  }
+  .persona-summary {
+    color: var(--anvil-text-muted);
+  }
+</style>

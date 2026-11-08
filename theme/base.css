@@ -1,0 +1,15 @@
+/*
+ * Global style rules beyond what tokens control. Keep this small: use
+ * tokens.css for values, and component files for component-specific rules.
+ */
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--anvil-font-heading);
+}
+
+.sl-markdown-content :is(table) {
+  border-radius: var(--anvil-radius);
+}
