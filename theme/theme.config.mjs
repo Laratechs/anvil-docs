@@ -8,7 +8,9 @@
 /** @type {Partial<import('@astrojs/starlight/types').StarlightUserConfig>} */
 export const theme = {
   logo: {
-    src: './theme/assets/logo.svg',
+    // One file per theme, because an <img> can't read the colour tokens.
+    light: './theme/assets/logo-light.svg',
+    dark: './theme/assets/logo-dark.svg',
     // Hide the text title beside the logo by setting this to true once the
     // logo includes the wordmark.
     replacesTitle: false,
@@ -22,5 +24,7 @@ export const theme = {
   // Replace Starlight's built-in components here, e.g.
   //   components: { Footer: './theme/components/Footer.astro' },
   // The full list: https://starlight.astro.build/reference/overrides/
-  components: {},
+  components: {
+    Header: './theme/components/Header.astro',
+  },
 };

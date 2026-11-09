@@ -1,4 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Anvil">
   <!-- Placeholder mark: a simple anvil. Replace with the real logo. -->
-  <path fill="#e07a2e" d="M6 16h40c0 6 6 10 14 10v4c-8 0-12 3-14 6H38v6l6 6v4H20v-4l6-6v-6h-6c-6 0-12-6-14-12z"/>
+  <!-- Ink follows the browser's colour scheme: steel-600 on light, steel-400 on dark,
+       the accent of each theme in theme/tokens.css. -->
+  <style>
+    path { fill: #44637a; }
+    @media (prefers-color-scheme: dark) { path { fill: #8ca9c0; } }
+  </style>
+  <path d="M6 16h40c0 6 6 10 14 10v4c-8 0-12 3-14 6H38v6l6 6v4H20v-4l6-6v-6h-6c-6 0-12-6-14-12z"/>
 </svg>

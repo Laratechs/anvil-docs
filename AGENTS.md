@@ -34,3 +34,11 @@ arrive from Laratechs/anvil.
 or an authored page listed in the structure that doesn't exist. For a
 visual or navigation change, run `npm run dev` and look at the page in both
 dark and light themes and at phone width.
+
+**Stop every server you start before you finish.** That covers
+`npm run dev`, `npm run preview` and anything else that runs `astro`.
+Stop each one the same way you started it: preview_stop for a preview
+server, or kill the background shell's process. Then check that nothing is
+still listening, for example with `pgrep -fl astro` or `lsof -i :4321`.
+A server left behind holds the port, so the next one starts on a different
+port and you end up checking a stale build.

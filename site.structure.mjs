@@ -38,12 +38,51 @@ export const sources = {
 };
 
 /**
+ * Links in the header bar, beside the site title. `link` is a path
+ * relative to the site root, like a sidebar cross-link.
+ */
+export const header = [{ label: 'Docs', link: 'concepts/overview/' }];
+
+/**
  * The navigation, in order. Each group is one persona (or a shared
  * section) and becomes one sidebar group. Upstream pages are whole files:
  * Anvil keeps one file per page under docs/, so a page only breaks when
  * its file moves. The README's opening (`section: null`) is the one cut.
  */
 export const groups = [
+  {
+    id: 'concepts',
+    label: 'Concepts',
+    summary: 'The model every persona shares.',
+    pages: [
+      {
+        slug: 'concepts/overview',
+        label: 'What Anvil is',
+        // `section: null` takes what comes before the file's first `##`.
+        from: { source: 'anvil', file: 'README.md', section: null, title: 'What Anvil is' },
+      },
+      {
+        slug: 'concepts/glossary',
+        label: 'Glossary',
+        from: { source: 'anvil', file: 'CONTEXT.md', title: 'Glossary' },
+      },
+      {
+        slug: 'concepts/how-it-works',
+        label: 'How Anvil works',
+        from: { source: 'anvil', file: 'docs/how-it-works.md' },
+      },
+      {
+        slug: 'concepts/testing',
+        label: 'How Anvil is tested',
+        from: { source: 'anvil', file: 'docs/testing.md' },
+      },
+      {
+        slug: 'concepts/decisions',
+        label: 'Decisions and limitations',
+        from: { source: 'anvil', file: 'docs/decisions.md' },
+      },
+    ],
+  },
   {
     id: 'use',
     label: 'Use Anvil',
@@ -129,39 +168,6 @@ export const groups = [
       {
         label: 'Testing a catalog',
         link: 'concepts/testing/#testing-a-catalog',
-      },
-    ],
-  },
-  {
-    id: 'concepts',
-    label: 'Concepts',
-    summary: 'The model every persona shares.',
-    pages: [
-      {
-        slug: 'concepts/overview',
-        label: 'What Anvil is',
-        // `section: null` takes what comes before the file's first `##`.
-        from: { source: 'anvil', file: 'README.md', section: null, title: 'What Anvil is' },
-      },
-      {
-        slug: 'concepts/glossary',
-        label: 'Glossary',
-        from: { source: 'anvil', file: 'CONTEXT.md', title: 'Glossary' },
-      },
-      {
-        slug: 'concepts/how-it-works',
-        label: 'How Anvil works',
-        from: { source: 'anvil', file: 'docs/how-it-works.md' },
-      },
-      {
-        slug: 'concepts/testing',
-        label: 'How Anvil is tested',
-        from: { source: 'anvil', file: 'docs/testing.md' },
-      },
-      {
-        slug: 'concepts/decisions',
-        label: 'Decisions and limitations',
-        from: { source: 'anvil', file: 'docs/decisions.md' },
       },
     ],
   },

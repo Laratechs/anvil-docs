@@ -13,3 +13,16 @@ h4 {
 .sl-markdown-content :is(table) {
   border-radius: var(--anvil-radius);
 }
+
+/* Borders, not shadows: inline code sits in a sunken well with a hairline,
+   which keeps it visible in the dark theme, where sunken matches the page. */
+.sl-markdown-content code:not(:where(.not-content *, pre *)) {
+  border: var(--anvil-border-hairline) solid var(--anvil-border);
+  border-radius: calc(var(--anvil-radius) / 2);
+}
+
+/* Keyboard focus: the highest-contrast steel, offset onto the surface. */
+:focus-visible {
+  outline: var(--anvil-focus-width) solid var(--anvil-focus-ring);
+  outline-offset: 2px;
+}

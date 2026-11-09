@@ -45,8 +45,8 @@ const personas = groups.filter((g) => g.persona);
     gap: 0.4rem;
     height: 100%;
     padding: 1.25rem;
-    border: 1px solid var(--anvil-border);
-    border-top: 4px solid var(--persona-color);
+    border: var(--anvil-border-hairline) solid var(--anvil-border);
+    border-top: var(--anvil-border-persona-rule) solid var(--persona-color);
     border-radius: var(--anvil-radius);
     background: var(--anvil-surface-raised);
     color: var(--anvil-text);
@@ -55,6 +55,10 @@ const personas = groups.filter((g) => g.persona);
   .persona a:hover,
   .persona a:focus-visible {
     border-color: var(--persona-color);
+  }
+  .persona a:focus-visible {
+    outline: var(--anvil-focus-width) solid var(--anvil-focus-ring);
+    outline-offset: 2px;
   }
   .persona-who {
     font-size: var(--sl-text-xs);

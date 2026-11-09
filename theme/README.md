@@ -9,10 +9,15 @@ site by changing files here only.
 | [`tokens.css`](tokens.css) | The palette, fonts and radius, for dark and light themes, as `--anvil-*` variables, and their mapping onto Starlight's `--sl-*` variables. Start here. |
 | [`base.css`](base.css) | Global rules that tokens can't express (heading font, table corners). Keep it small. |
 | [`components/`](components) | Markup and style for custom pieces: `PersonaCards.astro` (the home page's "where do you want to start" cards). Also where replacements for Starlight's own components go. |
-| [`assets/logo.svg`](assets/logo.svg) | The header logo (placeholder). Also copy it to `public/favicon.svg` for the browser tab. |
+| [`assets/logo-light.svg`](assets/logo-light.svg), [`assets/logo-dark.svg`](assets/logo-dark.svg) | The header logo (placeholder), one per theme, inked in that theme's `--anvil-accent`. `public/favicon.svg` is the same mark, switching ink with the browser's colour scheme. Change all three together. |
 | [`theme.config.mjs`](theme.config.mjs) | Wires the above into Starlight: logo, favicon, stylesheets, component overrides. |
 
-The current values are **placeholders**: neutral and legible, not a design.
+The colours come from the **Anvil Design System**: slate blue monochrome
+(`#44637A`) with rose and olive marks for the Run and Catalogs personas.
+Each `--anvil-*` colour is the system's semantic token of the same name,
+with the primitive step it aliases in a comment, so a palette change there
+is copied here value for value. Type and shape are still the original
+neutral values, and the logo is still a placeholder.
 
 ## Restyling (for example, with Claude Design)
 

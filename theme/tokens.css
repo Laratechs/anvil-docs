@@ -1,10 +1,14 @@
 /*
  * Design tokens: the whole palette and type scale of the site.
  *
- * These are PLACEHOLDERS, chosen to be neutral and legible until the visual
- * design is settled. To restyle the site, change the --anvil-* values below.
+ * The colours come from the Anvil Design System: slate blue monochrome
+ * (#44637A) with rose and olive split-complement accents for the Run and
+ * Catalogs personas. Each --anvil-* name below is the system's semantic
+ * token of the same name; the comment beside it is the primitive step it
+ * aliases, so a change in the system can be copied here step for step.
+ *
  * The second half of the file maps them onto the variables Starlight reads,
- * and shouldn't need to change.
+ * and rarely needs to change.
  *
  * Starlight is dark by default; `[data-theme='light']` is the light theme.
  */
@@ -19,56 +23,140 @@
 
   /* Shape */
   --anvil-radius: 0.5rem;
+  --anvil-border-hairline: 1px;
+  --anvil-border-persona-rule: 4px;
+  --anvil-focus-width: 2px;
 
-  /* Colour, dark theme */
-  --anvil-accent-low: #3a1d0b;
-  --anvil-accent: #f08a3c;
-  --anvil-accent-high: #ffd9bd;
+  /* Surfaces, dark theme */
+  --anvil-surface: #050d14;          /* slate-1000: page background */
+  --anvil-surface-raised: #0e181f;   /* slate-950: header, sidebar, cards */
+  --anvil-surface-overlay: #1e282f;  /* slate-900: menus, dialogs */
+  --anvil-surface-sunken: #050d14;   /* slate-1000: code, inputs */
 
-  --anvil-surface: #121316;     /* page background */
-  --anvil-surface-raised: #1b1d21;
-  --anvil-text: #f2f2f3;
-  --anvil-text-muted: #b6b8bd;
-  --anvil-border: #33363c;
+  /* Text */
+  --anvil-text: #f3f7fb;             /* slate-50 */
+  --anvil-text-muted: #bac6cf;       /* slate-300 */
+  --anvil-text-subtle: #9aa7b1;      /* slate-400 */
 
-  /* The three persona colours, used on the home page and section overviews. */
-  --anvil-persona-use: #6cb6ff;
-  --anvil-persona-run: #7ee2a8;
-  --anvil-persona-catalogs: #f5b85b;
+  /* Borders */
+  --anvil-border: #343f47;           /* slate-800: decorative hairlines */
+  --anvil-border-strong: #616e77;    /* slate-600: edges that carry meaning */
+  --anvil-neutral-strong: #e7eef4;  /* slate-100: between text and text-muted (Starlight gray-1) */
+  --anvil-neutral-faint: #1e282f;   /* slate-900: between border and surface (Starlight gray-6) */
+
+  /* Steel, the accent */
+  --anvil-accent: #8ca9c0;           /* steel-400 */
+  --anvil-accent-hover: #b5c7d5;     /* steel-300 */
+  --anvil-accent-subtle: #1a2833;    /* steel-900 */
+  --anvil-accent-text: #b5c7d5;      /* steel-300 */
+  --anvil-on-accent: #050d14;        /* slate-1000 */
+  --anvil-focus-ring: #d3dee7;       /* steel-200 */
+
+  /* Status: text and border colour, and a subtle background */
+  --anvil-success: #50be75;          /* green-400 */
+  --anvil-success-subtle: #001c09;   /* green-950 */
+  --anvil-warning: #f3ba45;          /* amber-300 */
+  --anvil-warning-subtle: #1f1400;   /* amber-950 */
+  --anvil-danger: #ff726e;           /* red-400 */
+  --anvil-danger-subtle: #310104;    /* red-950 */
+  --anvil-info: #b5c7d5;             /* steel-300 */
+  --anvil-info-subtle: #1a2833;      /* steel-900 */
+
+  /* The three persona colours: marks (rules, kickers, borders), never fills. */
+  --anvil-persona-use: #b5c7d5;      /* steel-300 */
+  --anvil-persona-run: #d39094;      /* rose-400 */
+  --anvil-persona-catalogs: #aca871; /* olive-400 */
 }
 
 :root[data-theme='light'] {
-  --anvil-accent-low: #ffe6d3;
-  --anvil-accent: #b4520f;
-  --anvil-accent-high: #5a2604;
+  --anvil-surface: #fbfdff;          /* slate-0 */
+  --anvil-surface-raised: #f3f7fb;   /* slate-50 */
+  --anvil-surface-overlay: #fbfdff;  /* slate-0: needs border-strong */
+  --anvil-surface-sunken: #e7eef4;   /* slate-100 */
 
-  --anvil-surface: #ffffff;
-  --anvil-surface-raised: #f6f6f7;
-  --anvil-text: #16171a;
-  --anvil-text-muted: #55585f;
-  --anvil-border: #dcdde0;
+  --anvil-text: #0e181f;             /* slate-950 */
+  --anvil-text-muted: #343f47;       /* slate-800 */
+  --anvil-text-subtle: #4a565f;      /* slate-700 */
 
-  --anvil-persona-use: #1f6fbf;
-  --anvil-persona-run: #1d8a4e;
-  --anvil-persona-catalogs: #a8650c;
+  --anvil-border: #d4dee6;           /* slate-200 */
+  --anvil-border-strong: #616e77;    /* slate-600 */
+  --anvil-neutral-strong: #1e282f;  /* slate-900 */
+  --anvil-neutral-faint: #e7eef4;   /* slate-100 */
+
+  --anvil-accent: #44637a;           /* steel-600 */
+  --anvil-accent-hover: #354f63;     /* steel-700 */
+  --anvil-accent-subtle: #e8eef2;    /* steel-100 */
+  --anvil-accent-text: #354f63;      /* steel-700 */
+  --anvil-on-accent: #fbfdff;        /* slate-0 */
+  --anvil-focus-ring: #2c404f;       /* steel-800 */
+
+  --anvil-success: #036532;          /* green-700 */
+  --anvil-success-subtle: #c0ffcf;   /* green-100 */
+  --anvil-warning: #6d4e02;          /* amber-700 */
+  --anvil-warning-subtle: #ffeac6;   /* amber-100 */
+  --anvil-danger: #a0021b;           /* red-700 */
+  --anvil-danger-subtle: #ffe6e4;    /* red-100 */
+  --anvil-info: #354f63;             /* steel-700 */
+  --anvil-info-subtle: #e8eef2;      /* steel-100 */
+
+  --anvil-persona-use: #44637a;      /* steel-600 */
+  --anvil-persona-run: #99555a;      /* rose-600 */
+  --anvil-persona-catalogs: #736e32; /* olive-600 */
 }
 
 /* ---- Mapping onto Starlight ----------------------------------------- */
 /* https://starlight.astro.build/guides/css-and-tailwind/#theming        */
+/* Starlight's gray scale runs from text (white) to page (black) in both  */
+/* themes, so mapping it in order covers every component that uses it.   */
 
 :root,
 :root[data-theme='light'] {
   --sl-font: var(--anvil-font-body);
   --sl-font-mono: var(--anvil-font-mono);
 
-  --sl-color-accent-low: var(--anvil-accent-low);
+  /* Accent. Starlight reads -low as a tint, -high as accent text. */
+  --sl-color-accent-low: var(--anvil-accent-subtle);
   --sl-color-accent: var(--anvil-accent);
-  --sl-color-accent-high: var(--anvil-accent-high);
+  --sl-color-accent-high: var(--anvil-accent-text);
+  --sl-color-text-accent: var(--anvil-accent-text);
+  --sl-color-bg-accent: var(--anvil-accent);
+  --sl-color-text-invert: var(--anvil-on-accent);
 
-  --sl-color-white: var(--anvil-text);        /* highest-contrast text */
+  /* Neutrals, highest contrast first */
+  --sl-color-white: var(--anvil-text);
+  --sl-color-gray-1: var(--anvil-neutral-strong);
   --sl-color-gray-2: var(--anvil-text-muted);
+  --sl-color-gray-3: var(--anvil-text-subtle);
+  --sl-color-gray-4: var(--anvil-border-strong);
   --sl-color-gray-5: var(--anvil-border);
-  --sl-color-black: var(--anvil-surface);     /* page background */
+  --sl-color-gray-6: var(--anvil-neutral-faint);
+  --sl-color-gray-7: var(--anvil-surface-raised);
+  --sl-color-black: var(--anvil-surface);
+
+  --sl-color-text: var(--anvil-text-muted);
+  --sl-color-bg: var(--anvil-surface);
   --sl-color-bg-nav: var(--anvil-surface-raised);
-  --sl-color-bg-sidebar: var(--anvil-surface);
+  --sl-color-bg-sidebar: var(--anvil-surface-raised);
+  --sl-color-bg-inline-code: var(--anvil-surface-sunken);
+  --sl-color-hairline-light: var(--anvil-border);
+  --sl-color-hairline: var(--anvil-border);
+  --sl-color-hairline-shade: var(--anvil-surface);
+
+  /* Status. Asides use -low for the background, the base for the edge
+     and icon, and -high for the text. Starlight's tip (purple) is info. */
+  --sl-color-green-low: var(--anvil-success-subtle);
+  --sl-color-green: var(--anvil-success);
+  --sl-color-green-high: var(--anvil-success);
+  --sl-color-orange-low: var(--anvil-warning-subtle);
+  --sl-color-orange: var(--anvil-warning);
+  --sl-color-orange-high: var(--anvil-warning);
+  --sl-color-red-low: var(--anvil-danger-subtle);
+  --sl-color-red: var(--anvil-danger);
+  --sl-color-red-high: var(--anvil-danger);
+  --sl-color-blue-low: var(--anvil-info-subtle);
+  --sl-color-blue: var(--anvil-info);
+  --sl-color-blue-high: var(--anvil-info);
+  --sl-color-purple-low: var(--anvil-info-subtle);
+  --sl-color-purple: var(--anvil-info);
+  --sl-color-purple-high: var(--anvil-info);
 }
