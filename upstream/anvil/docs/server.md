@@ -27,7 +27,7 @@ github {
 }
 
 catalog {
-  source = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0"
+  source = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0"
 }
 
 terraform {
@@ -62,7 +62,7 @@ Anvil fetches a Git source as its own GitHub identity, so a private catalog
 repository works when the GitHub App can read it
 ([Setting up a GitHub App](github-app.md)). Anvil no longer builds a
 catalog in: `source = "builtin"` is refused, and the same catalog is
-`git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0`.
+`git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0`.
 
 A catalog can name the versions it works with in its `catalog.hcl`, as
 Terraform version constraints:
@@ -142,7 +142,7 @@ service, and listed by `anvil catalog show`. Definitions read them as
 | `github.app.private_key_file` | `ANVIL_GITHUB_APP_PRIVATE_KEY_FILE` | | | Path to the App's private key (`.pem`) |
 | `github.app.installation_id` | `ANVIL_GITHUB_APP_INSTALLATION_ID` | | the App's installation on the organization | Pins the installation |
 | *(environment only)* | `ANVIL_GITHUB_TOKEN` | | `$GITHUB_TOKEN`, else `gh auth token` | Without an App, a token Anvil acts as instead (development). Not allowed together with an App |
-| `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0` |
+| `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0` |
 | `catalog.allow_branch` | `ANVIL_CATALOG_ALLOW_BRANCH` | | `false` | Let the catalog source name a branch (development only) |
 | `terraform.binary` | `ANVIL_TERRAFORM_BIN` | | `terraform` | Terraform executable |
 | `terraform.state.bucket` | `ANVIL_TF_STATE_BUCKET` | | | GCS bucket for state. Unset keeps state on local disk (development only). |

@@ -23,7 +23,7 @@ github {
 catalog {
   # Required: a local directory, or git::<url>?ref=<tag or commit>. The
   # server's GitHub identity fetches it, so it may be private.
-  source       = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0" # ANVIL_CATALOG
+  source       = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0" # ANVIL_CATALOG
   allow_branch = false                                                            # ANVIL_CATALOG_ALLOW_BRANCH: let source name a branch (development only)
 }
 

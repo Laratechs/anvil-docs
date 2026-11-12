@@ -136,16 +136,18 @@ A service can still choose for itself with its `public` option
 
 A service that wants to own its infrastructure asks for a self-managed
 deployment (`anvil service deploy -type=self-managed NAME`), and Anvil
-creates an empty GCP project for it: a cloud of its own. This is the
-catalog's `gcpproject` deployment, and it is offered once a valid
-`gcpproject` binding exists. Skip this section to offer only the
-platform.
+creates a GCP project for it: a cloud of its own. This is the catalog's
+`gcpproject` deployment, and it is offered once a valid `gcpproject`
+binding exists. Skip this section to offer only the platform.
 
 1. Choose the folder new projects are created in. Policies and access
    you set on the folder apply to every project in it.
 2. Grant Anvil's GCP identity (step 3) **Project Creator**
-   (`roles/resourcemanager.projectCreator`) on the folder, and **Billing
-   Account User** (`roles/billing.user`) on the billing account.
+   (`roles/resourcemanager.projectCreator`) and **Project Deleter**
+   (`roles/resourcemanager.projectDeleter`) on the folder, and **Billing
+   Account User** (`roles/billing.user`) on the billing account. Anvil
+   owns the projects it creates, which covers what it sets up inside
+   them.
 3. Create the binding:
 
    ```
@@ -153,6 +155,7 @@ platform.
      -set folder_id=folders/123456789012 \
      -set billing_account=000000-AAAAAA-000000 \
      -set project_prefix=ex \
+     -set workload_identity_provider=projects/123456789012/locations/global/workloadIdentityPools/github/providers/laratechs \
      -set owner=group:engineering@example.com \
      gcp-projects
    ```
@@ -160,20 +163,46 @@ platform.
    - `project_prefix`: project IDs are `<prefix>-<service>`, and are
      unique across Google Cloud, so pick 1 to 4 lowercase letters and
      digits of your own.
+   - `workload_identity_provider`: the provider from step 2 of this
+     guide. One pool serves every project.
+   - `region` (optional, default `us-central1`): where each project's
+     image repository is.
    - `owner` (optional): an IAM member made Owner of each project.
      Without it, access is whatever the folder grants.
 
-Anvil creates the project with no default network and nothing else, and
-`anvil service get` shows its ID and console link. What runs in it, and
-how the service's CI deploys there, is the service team's: Anvil sets no
-CI variables for it. A service has this or the Cloud Run deployment,
-never both, and can't switch.
+**What Anvil sets up.** The project, with no default network, and what
+the service's CI needs to publish images to it:
 
-Anvil never deletes a team's project. A service with one can't be
-archived or force deleted until the project is decommissioned by hand.
+| Resource | Name | Purpose |
+| --- | --- | --- |
+| Artifact Registry repository | `orders` | The service's images, `REGION-docker.pkg.dev/ex-orders/orders/orders` |
+| Service account | `ci-orders` | What CI authenticates as. Only workflows in `Laratechs/orders` can use it, and it can only push to that repository |
+| APIs | Artifact Registry, IAM, IAM Credentials | Enabled for the two above |
 
-This definition has been tested with mock providers only; apply it to a
-test folder before offering it
+It sets `ANVIL_GCP_PROJECT`, `ANVIL_GCP_REGION`, `ANVIL_GCP_IMAGE`,
+`ANVIL_GCP_SERVICE_ACCOUNT` and `ANVIL_GCP_WORKLOAD_IDENTITY_PROVIDER` on
+the repository, so the template's `push` job publishes every merge's
+image to the project.
+
+**What it leaves to the team.** Delivery: there is no `ANVIL_GCP_SERVICE`,
+so the template's `deploy` job doesn't run. The team decides what runs
+the image, adds its own workflow that authenticates as `ci-orders`, and
+grants that identity the roles its deploys need. A service has this or
+the Cloud Run deployment, never both, and can't switch.
+
+**Deleting.** `anvil service delete -force` deletes the project and
+**everything in it**, including what the team built after Anvil created
+it. The command names the project, says so, and asks for the service
+name. Google keeps a deleted project for 30 days, during which an
+organization administrator can restore it and its ID can't be reused, so
+a new service with the same name fails until then. Archiving
+(`anvil service delete` without `-force`) is refused for a service with a
+project of its own: an archive tears a deployment down, and restoring
+couldn't bring the team's work back.
+
+This definition has been tested with mock providers only, and the
+template's `push` job hasn't run on GitHub; apply it to a test folder
+before offering it
 ([#41](https://github.com/Laratechs/anvil/issues/41)).
 
 ## Known limitations

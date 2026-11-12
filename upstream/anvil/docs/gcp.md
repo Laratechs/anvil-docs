@@ -72,15 +72,18 @@ Services that don't choose follow the platform team's default
 ## How CI deploys
 
 The template's CI (`.github/workflows/ci.yml` in
-`Laratechs/anvil-template-go`, kept in sync by Anvil) has a `deploy` job
-that runs on pushes to `main` when `ANVIL_GCP_SERVICE` is set. It
+`Laratechs/anvil-template-go`, kept in sync by Anvil) has two jobs that
+run on pushes to `main`. `push` runs when `ANVIL_GCP_IMAGE` is set: it
 exchanges the workflow's GitHub OIDC token for the `ci-<service>`
-identity, pushes the image to `ANVIL_GCP_IMAGE`, deploys it by digest
-with `gcloud run deploy`, and puts the URL in the run's summary. The image
+identity and pushes the image to `ANVIL_GCP_IMAGE`. `deploy` needs it and
+runs when `ANVIL_GCP_SERVICE` is set: it deploys that digest with
+`gcloud run deploy`, and puts the URL in the run's summary. A service
+with a project of its own gets `push` only
+([Self-managed projects](gcp-setup.md#self-managed-projects)). The image
 is built once, by the `build` job, and kept as a run artifact: `publish`
-pushes it to ghcr.io (with its SBOM and provenance) and `deploy` pushes its
+pushes it to ghcr.io (with its SBOM and provenance) and `push` copies its
 linux/amd64 manifest, so Cloud Run runs the same digest. Services without
-the gcp cloud skip `deploy`.
+a deployment skip both.
 
 Variables alone don't start CI, so Anvil's `github-repository` component
 commits `.github/anvil-ci.env` after setting them (and after the managed

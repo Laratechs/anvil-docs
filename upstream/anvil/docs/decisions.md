@@ -75,10 +75,11 @@ Anvil is before 1.0, so some of these will change; the
   a service's ghcr.io image, and Anvil deliberately holds no other token
   that could. Until someone deletes it by hand (the delete's warning has
   the command), a new service with the same name can't publish or deploy.
-- **Clouds are never deleted.** `anvil service delete`, with or without
-  `-force`, refuses a service with a self-managed deployment (a GCP
-  project or an AWS account of its own). Decommissioning one is a manual,
-  reviewed operation for now.
+- **A service with its own cloud can't be archived.** An archive tears a
+  deployment down, and restoring couldn't bring back what the team built
+  in a project of its own, so `anvil service delete` refuses it. Only
+  `-force` deletes the project, with everything in it, after a warning
+  that says so. An AWS account is never deleted by Anvil.
 - **AWS is off.** The catalog keeps its AWS account definition, but
   Anvil offers it only while an aws binding exists, and none should be
   created until AWS is taken up again.

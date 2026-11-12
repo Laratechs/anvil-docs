@@ -365,6 +365,12 @@ root-module addresses.
   no cloud components, targeted at those addresses, and then applies the
   service's `archive_targets`. The service and its clouds stay on record.
   **Restore** runs a full apply, which recreates the clouds.
+- A `self-managed` deployment is never torn down by an archive: it is
+  the service's own cloud, and restoring couldn't bring back what its
+  team built there. Archiving its service is refused (`409`), and a force
+  delete destroys its `destroy_on_delete` addresses after a warning that
+  everything in the cloud goes with them. So `destroy_on_delete` on a
+  self-managed deployment means "a force delete may delete this cloud".
 - A cloud with no `destroy_on_delete` makes its service impossible to
   archive or force delete (`409`): Anvil refuses rather than forget the
   cloud's resources or leave them running. A service archived by a release

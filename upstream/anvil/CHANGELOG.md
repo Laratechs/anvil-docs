@@ -180,12 +180,21 @@ listed under **Breaking changes**.
 
 ### What's in it
 
-- **Self-managed GCP projects.** Catalog v0.2.0 adds `gcpproject`:
-  `anvil service deploy -type=self-managed NAME` gives a service an empty
-  GCP project of its own, in the folder a `gcpproject` binding names
+- **Self-managed GCP projects.** Catalog v0.3.0 has `gcpproject`:
+  `anvil service deploy -type=self-managed NAME` gives a service a GCP
+  project of its own, in the folder a `gcpproject` binding names, with an
+  image repository and a CI identity, and sets the CI variables so the
+  template's new `push` job publishes each merge's image there. Delivery
+  is the team's: nothing deploys it
   ([Self-managed projects](docs/gcp-setup.md#self-managed-projects)).
-  Anvil never deletes one. Examples and CI now pin catalog `v0.2.0`,
-  which needs this release (#41).
+  Examples and CI now pin catalog `v0.3.0`, which needs this release
+  (#41).
+- **Deleting a service's own cloud.** `anvil service delete -force`
+  deletes a self-managed deployment's cloud with everything in it, and
+  says so before asking for the service name. Archiving such a service
+  is refused, as an archive would delete the cloud and a restore couldn't
+  bring its contents back. Service bodies give each deployment's `type`
+  in `status.clouds` (#41).
 - **`anvil service migrate NAME`** moves a service's deployment to the
   latest revision of its binding and applies it, which is how a change
   to where deployments land reaches a running service. It names the

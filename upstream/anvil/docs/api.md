@@ -42,7 +42,9 @@ for the deployment the service has or, without one, a platform-managed
 one. A service has one deployment, and its type can't change: a request
 for another type, or for another deployment, is a `409`. Service bodies
 still list it under `spec.clouds` and `status.clouds`, from when a
-deployment was called a cloud.
+deployment was called a cloud. Each entry of `status.clouds` has its
+`type`. Archiving a service whose deployment is self-managed and can be
+deleted is a `409`: only `force=true` deletes its cloud.
 
 A cloud binding says where one provider's clouds land. Binding bodies have
 `kind` (`CloudBinding`), `name`, `revision`, `spec` (`provider`, `values`),
