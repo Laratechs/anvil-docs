@@ -42,3 +42,12 @@ positional arguments. Following HashiCorp CLI conventions, help you ask for
 exits `0`, help printed because a command was incomplete exits `127`, and
 errors exit `1`.
 
+
+## Terminal status
+
+While a change runs on an interactive terminal, the CLI also reports its
+state with the [Program Status Protocol (OSC 7501)](https://www.superlogical.com/rex/docs/build/program-status),
+so a terminal that supports it can show, in another tab, that the change is
+working, waiting for you to confirm a delete, done, or failed. Terminals that
+don't support it ignore the sequence. Nothing is reported with `-json`, when
+stderr isn't a terminal, or for commands that only read.

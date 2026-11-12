@@ -254,6 +254,10 @@ listed under **Breaking changes**.
   default, 0 minimum instances) that the built-in `gcp-cloud-run`
   component didn't declare, so every re-apply, such as after a catalog
   change, planned removing it. The component now declares that default.
+- Ctrl+C at `anvil service delete`'s confirmation prompt ends the command
+  ("stopped at the confirmation; nothing was changed"). It used to be
+  ignored until you pressed Return, and the terminal status
+  (OSC 7501) kept showing the command as waiting on you.
 
 ## v0.1.0 (2026-11-06)
 
