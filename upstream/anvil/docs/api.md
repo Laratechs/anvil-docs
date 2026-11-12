@@ -5,12 +5,12 @@ response carries an `Anvil-Version` header.
 
 | Method and path | Body | Result |
 | --- | --- | --- |
-| `POST /v1/services` | `{"name","description"?,"cloud"?,"options"?,"binding"?}` | `200` service if unchanged, `202` operation queued |
+| `POST /v1/services` | `{"name","description"?,"type"?,"deployment"?,"options"?,"binding"?}` | `200` service if unchanged, `202` operation queued |
 | `GET /v1/services` | | `200` `{"services": [...]}` |
 | `GET /v1/services/{name}` | | `200` service, with an `ETag` |
 | `DELETE /v1/services/{name}?confirm={name}[&force=true]` | | `200` if unchanged, `202` operation queued |
-| `POST /v1/services/{name}/clouds` | `{"provider":"gcp"\|"aws","options"?,"binding"?}` | `200` if unchanged, `202` operation queued |
-| `GET /v1/services/{name}/clouds/{provider}` | | `200` cloud |
+| `POST /v1/services/{name}/deployment` | `{"type"?,"deployment"?,"options"?,"binding"?}` | `200` if unchanged, `202` operation queued, `409` for another type or a second deployment |
+| `POST /v1/services/{name}/migrate?confirm={name}` | | `200` if unchanged, `202` operation queued, `409` if the binding's latest revision isn't valid |
 | `GET /v1/operations/{id}[?wait=60s&revision=N]` | | `200` operation; with `wait`, long-polls (up to 5 minutes) until its `revision` differs from `N` (default: the current one), for example when it starts running, makes progress or finishes. A running operation has a `step` (`rendering`, `initializing`, `applying`, `deleting`, `finishing`) and, while applying, `progress` (`done`, `total`, `current`), updated at most every 2 seconds. A succeeded apply has `changes` (`add`, `change`, `destroy`, `import`), Terraform's count of what it changed |
 | `POST /v1/bindings` | `{"name","provider","values"?}` | `201` binding with a new revision (`Location: /v1/bindings/{name}?revision=N`), `200` if unchanged |
 | `PATCH /v1/bindings/{name}` | `{"values"}` (`null` removes a value) | `201` new revision, `200` if unchanged |
@@ -29,8 +29,20 @@ Service bodies have `spec`, `status` (with the derived `phase`) and
 `generation`. Status lives only under `status`: the repository and image
 in `status.repository_url` and `status.image`, and each cloud, with its
 catalog definition's `title`, in `status.clouds`. The MVP's top-level
-`description` and `error` are still included and deprecated. The MVP's `POST /v1/services/{name}/projects` with
-`{"cloud"}` is a deprecated alias of the clouds route.
+`description` and `error` are still included and deprecated.
+
+A **deployment** is where a service runs. `type` asks for one by type:
+`"platform-managed"` (on the platform, the shared infrastructure the
+platform team runs) or `"self-managed"` (a cloud of the service's own).
+The server picks the deployment its catalog offers for the type, and
+none, or several, is a `400`; `deployment` names one, for a server that
+offers several of a type. On `POST /v1/services`, either field also gives
+the new service a deployment. On the deployment route, an empty body asks
+for the deployment the service has or, without one, a platform-managed
+one. A service has one deployment, and its type can't change: a request
+for another type, or for another deployment, is a `409`. Service bodies
+still list it under `spec.clouds` and `status.clouds`, from when a
+deployment was called a cloud.
 
 A cloud binding says where one provider's clouds land. Binding bodies have
 `kind` (`CloudBinding`), `name`, `revision`, `spec` (`provider`, `values`),
@@ -43,14 +55,22 @@ secrets. Any organization member can manage bindings until Anvil has an
 operator role.
 
 A cloud whose definition declares a `binding { }` block records the
-binding revision it is created with (`binding` in a cloud request names
-it; without one, the provider's only valid binding is used, and none or
-several is a `400` on `cloud`). The cloud body's `spec.binding` and the
-service's `spec.bindings` show it as `{"name", "revision"}`. Applies,
+binding revision it is created with (`binding` in a deployment request
+names it; without one, its only valid binding is used, and none or
+several is a `400` on `deployment`). The service's `spec.bindings` shows
+it as `{"name", "revision"}`. Applies,
 archives and force deletes render the cloud with that revision, so
 updating a binding never re-applies existing clouds; clouds created
 afterwards get the new revision. An existing cloud keeps its binding:
 naming another one is a `409`.
+
+A service body lists the deployments that record an earlier revision
+than their binding's latest under `binding_updates`, each as
+`{"deployment", "binding", "revision", "latest"}`.
+`POST /v1/services/{name}/migrate?confirm={name}` records the latest
+revision for each and applies the service; with nothing to migrate it
+changes nothing, unless the last apply failed, which it retries. A latest
+revision the catalog doesn't accept is a `409`.
 
 Clouds created before clouds recorded their binding are migrated when the
 server starts: for each cloud definition with a `binding { }` block, the
@@ -66,7 +86,8 @@ logs each cloud it left unbound with the reason, and those clouds' applies
 the server restarts. The migration never picks one of the operator's other
 bindings.
 
-`GET /v1/catalog` lists each definition's components, options and, for a
+`GET /v1/catalog` lists each definition's components, a deployment's
+`type` (`platform-managed` or `self-managed`), options and, for a
 cloud that declares a `binding { }` block, its binding schema (`binding`:
 each attribute's `name`, `type` and `default`). Values are checked against
 that schema: an undeclared attribute, a missing required one or a value of

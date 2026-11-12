@@ -33,14 +33,19 @@ Anvil is before 1.0, so some of these will change; the
   re-applied from the catalog's templates on every apply, so platform
   changes reach existing services. App code is seeded once and never
   overwritten.
-- **Where services run:** Optional, one Cloud Run service per service, in
-  one shared GCP project the platform team runs. Anvil provisions the slot
+- **Where services run:** Optional. A service's deployment is
+  platform-managed by default: one Cloud Run service per service, in
+  one shared GCP project the platform team runs. A service that wants to
+  own its infrastructure asks for a self-managed deployment, a cloud of
+  its own, instead. A service has one deployment and its type can't
+  change ([#36](https://github.com/Laratechs/anvil/issues/36)). Anvil provisions the slot
   and the identities; the service's CI pushes to its own Artifact Registry
   repository and deploys, authenticated by GitHub OIDC with no stored keys.
   Anvil starts the first run by committing CI's settings, and the CLI
-  waits for it, so `anvil service create -cloud=gcp` ends with a URL
-  serving the new repository's code. A project per service was dropped: it
-  scaffolded far more than the workflow needs.
+  waits for it, so `anvil service create -deploy` ends with a URL
+  serving the new repository's code. A project per service is offered
+  only as the self-managed deployment, and empty: scaffolding one for
+  every service was far more than the workflow needs.
 
 ## Known limitations
 
@@ -70,9 +75,15 @@ Anvil is before 1.0, so some of these will change; the
   a service's ghcr.io image, and Anvil deliberately holds no other token
   that could. Until someone deletes it by hand (the delete's warning has
   the command), a new service with the same name can't publish or deploy.
-- **AWS account decommissioning.** `anvil service delete -force` refuses
-  services with an AWS account. Decommissioning one is a manual, reviewed
-  operation for now.
+- **Clouds are never deleted.** `anvil service delete`, with or without
+  `-force`, refuses a service with a self-managed deployment (a GCP
+  project or an AWS account of its own). Decommissioning one is a manual,
+  reviewed operation for now.
+- **AWS is off.** The catalog keeps its AWS account definition, but
+  Anvil offers it only while an aws binding exists, and none should be
+  created until AWS is taken up again.
+- **A deployment's type is fixed.** A service can't move between the
+  platform and a cloud of its own.
 - **Cloud Run.** Services are public (anyone with the URL can call them)
   unless they choose `-option public=false` or the operator sets
   `cloud_gcp.public` to `false`. Their runtime account starts with no

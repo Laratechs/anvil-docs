@@ -13,6 +13,18 @@ listed under **Breaking changes**.
 
 ### Breaking catalog changes
 
+- **Catalog contract 2 replaces contract 1,** which Anvil no longer
+  reads. Where a service runs is declared with
+  `deployment "<name>" { type = ... }` in place of `cloud "<provider>"`;
+  `type` is required and is `"platform-managed"` or `"self-managed"`. The
+  service reads `children.deployment`, whose entries have `name` and
+  `type` where `children.cloud`'s had `provider`. Two deployments may now
+  declare the same Terraform provider. To move a catalog, set
+  `contract = 2`, rename the blocks keeping their labels, add a `type`
+  and rename the reference; generated addresses don't change, so
+  existing services re-apply with nothing to change
+  ([Moving from contract 1](docs/catalog-contract.md#moving-from-contract-1))
+  (#37).
 - A Terraform `provider "<name>"` may be declared by only one definition
   (and once in it). Previously a second declaration silently replaced the
   first's configuration; now the catalog fails to load, naming both files.
@@ -60,6 +72,21 @@ listed under **Breaking changes**.
 
 ### Breaking changes
 
+- **`anvil cloud` and `anvil project` are removed,** with
+  `-cloud` on `anvil service create`. Use `anvil service deploy NAME` and
+  `anvil service create -deploy NAME`; `-type` chooses the type, and
+  `-deployment=<name>` a deployment by name on a server that offers
+  several of a type. `anvil cloud get` has no replacement:
+  `anvil service get` shows the deployment (#38).
+- **A service has one deployment.** A request for a second, or for
+  another type, is a `409`. Services that already have two keep them.
+- **API:** `POST /v1/services/{name}/deployment` replaces
+  `POST /v1/services/{name}/clouds`, and takes `type` and `deployment`
+  where that took `provider`. `POST /v1/services` takes `type` and
+  `deployment` where it took `cloud`. `GET
+  /v1/services/{name}/clouds/{provider}` and the deprecated
+  `POST /v1/services/{name}/projects` are removed. Field errors name
+  `deployment` where they named `cloud` (#38).
 - Anvil no longer builds a catalog in (#11). Its content moved, with its
   history, to [Laratechs/anvil-catalog](https://github.com/Laratechs/anvil-catalog);
   tag `v0.1.0` is the catalog this release used to build in, unchanged.
@@ -153,6 +180,29 @@ listed under **Breaking changes**.
 
 ### What's in it
 
+- **Self-managed GCP projects.** Catalog v0.2.0 adds `gcpproject`:
+  `anvil service deploy -type=self-managed NAME` gives a service an empty
+  GCP project of its own, in the folder a `gcpproject` binding names
+  ([Self-managed projects](docs/gcp-setup.md#self-managed-projects)).
+  Anvil never deletes one. Examples and CI now pin catalog `v0.2.0`,
+  which needs this release (#41).
+- **`anvil service migrate NAME`** moves a service's deployment to the
+  latest revision of its binding and applies it, which is how a change
+  to where deployments land reaches a running service. It names the
+  values that change and the deployment's stateful resources, and asks
+  for the service name. `anvil service list` has a `BINDING` column that
+  marks services behind their binding, `anvil service get` says so too,
+  and service bodies list them under `binding_updates`
+  (`POST /v1/services/{name}/migrate`). Ordinary requests still never
+  move a deployment (#39, #40).
+- **Deployments.** Where a service runs is its deployment, which is
+  platform-managed (on the shared infrastructure the platform team runs)
+  or self-managed (a cloud of the service's own). `anvil service deploy`
+  gives an existing service one, platform-managed unless `-type` says
+  otherwise, and `anvil service create -deploy` does it at creation. A
+  service has one deployment and its type can't change; a service
+  without one can get either later. `anvil service get` shows the
+  deployment's options and binding (#36, #37, #38).
 - The documentation is published at
   <https://laratechs.github.io/anvil-docs/>, from this repository's docs
   which every push to `main` that changes docs updates (the

@@ -27,7 +27,7 @@ github {
 }
 
 catalog {
-  source = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.1.0"
+  source = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0"
 }
 
 terraform {
@@ -62,7 +62,7 @@ Anvil fetches a Git source as its own GitHub identity, so a private catalog
 repository works when the GitHub App can read it
 ([Setting up a GitHub App](github-app.md)). Anvil no longer builds a
 catalog in: `source = "builtin"` is refused, and the same catalog is
-`git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.1.0`.
+`git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0`.
 
 A catalog can name the versions it works with in its `catalog.hcl`, as
 Terraform version constraints:
@@ -124,9 +124,9 @@ instead name a JSON file of the same settings keyed by definition
 file's entry replaces the block as a whole, with a warning.
 
 Settings apply to every service. What one service's requester may choose
-for its cloud is the definition's `options` block instead (for example
-the gcp cloud's `public`), set with `-option name=value` on
-`anvil service create -cloud` or `anvil cloud create`, stored on the
+for its deployment is the definition's `options` block instead (for
+example the gcp deployment's `public`), set with `-option name=value` on
+`anvil service create` or `anvil service deploy`, stored on the
 service, and listed by `anvil catalog show`. Definitions read them as
 `options.<name>`; an option not chosen takes its declared default, or
 `null`, which a definition can map to a setting.
@@ -142,7 +142,7 @@ service, and listed by `anvil catalog show`. Definitions read them as
 | `github.app.private_key_file` | `ANVIL_GITHUB_APP_PRIVATE_KEY_FILE` | | | Path to the App's private key (`.pem`) |
 | `github.app.installation_id` | `ANVIL_GITHUB_APP_INSTALLATION_ID` | | the App's installation on the organization | Pins the installation |
 | *(environment only)* | `ANVIL_GITHUB_TOKEN` | | `$GITHUB_TOKEN`, else `gh auth token` | Without an App, a token Anvil acts as instead (development). Not allowed together with an App |
-| `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.1.0` |
+| `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.2.0` |
 | `catalog.allow_branch` | `ANVIL_CATALOG_ALLOW_BRANCH` | | `false` | Let the catalog source name a branch (development only) |
 | `terraform.binary` | `ANVIL_TERRAFORM_BIN` | | `terraform` | Terraform executable |
 | `terraform.state.bucket` | `ANVIL_TF_STATE_BUCKET` | | | GCS bucket for state. Unset keeps state on local disk (development only). |
@@ -161,6 +161,39 @@ an aws binding, and so on; see the
 creates, and are ignored with a warning. `ANVIL_GCP_MEMBER_TEMPLATE`,
 `ANVIL_GCP_ROLES`, `ANVIL_AWS_GROUP_TEMPLATE` and
 `ANVIL_AWS_PERMISSION_SET_ARNS` are gone with team access, and are ignored.
+
+## Changing where deployments land
+
+A deployment keeps the binding revision it was created with, so
+`anvil binding update` changes nothing that is running: only deployments
+created afterwards use the new revision. To bring a running service to
+it, migrate the service:
+
+```
+anvil binding update -set region=europe-west1 gcp-shared
+anvil service list                 # BINDING shows "gcp-shared r1 (behind r2)"
+anvil service migrate orders       # shows what changes, and asks you to confirm
+```
+
+`anvil service migrate` records the binding's latest revision on the
+service and applies it. Terraform changes what it can in place and
+replaces the rest, and the data in a replaced stateful resource is lost,
+so try a change on one service before the others. The command names the
+values that differ and the deployment's stateful resources before you
+confirm.
+
+Known limitations:
+
+- **One service at a time.** There is no command for every service;
+  loop over the ones `anvil service list` marks.
+- **No plan preview.** The confirmation shows the binding's values, not
+  Terraform's plan.
+- **No way back by itself.** A failed migration leaves the service
+  recording the new revision, in phase `failed`; fix the cause and run
+  the command again, or store the earlier values as a new revision and
+  migrate to that.
+- **Any organization member** can migrate, as for bindings, until Anvil
+  has an operator role.
 
 ## Credentials
 

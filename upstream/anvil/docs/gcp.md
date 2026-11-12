@@ -1,13 +1,14 @@
 # Running services on Cloud Run
 
-Anvil's `gcp` cloud gives a service a place to run: a **Cloud Run service
-in one shared project** that the platform team sets up once
+Anvil's platform-managed deployment gives a service a place to run: a
+**Cloud Run service in one shared project** that the platform team sets
+up once
 ([Cloud Run setup](gcp-setup.md)). Anvil creates
 the service's slot and identities; the service's own CI pushes images and
 deploys. Anvil never rolls out versions.
 
 ```
-anvil service create -cloud=gcp orders     # or: anvil cloud create -service=orders gcp
+anvil service create -deploy orders     # or, for an existing service: anvil service deploy orders
 ```
 
 For each service, in the shared project and region, Anvil creates:
@@ -28,7 +29,7 @@ run builds the repository's code and deploys it. The CLI follows that run
 on GitHub (with your GitHub token) and ends with the URL:
 
 ```
-$ anvil service create -cloud=gcp orders
+$ anvil service create -deploy orders
 Provisioning orders.
 
   ✓ Request accepted (operation op_...)
@@ -55,9 +56,9 @@ Services are public by default: anyone with a service's URL can call it,
 so it opens in a browser. Each service chooses with its `public` option:
 
 ```
-anvil service create -cloud=gcp -option public=false orders   # private from the start
-anvil cloud create -service=orders -option public=false gcp   # make an existing one private
-anvil cloud create -service=orders -option public=null gcp    # back to the default
+anvil service create -deploy -option public=false orders   # private from the start
+anvil service deploy -option public=false orders           # make an existing one private
+anvil service deploy -option public=null orders            # back to the default
 ```
 
 A private service needs an identity token to call (`gcloud run services

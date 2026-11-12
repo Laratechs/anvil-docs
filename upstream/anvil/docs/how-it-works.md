@@ -7,7 +7,7 @@ what archiving and deleting do.
 ## How a request flows
 
 ```
-anvil service create [--cloud gcp] orders
+anvil service create [--deploy] orders
         │  (your GitHub token, from `gh auth token`)
         ▼
 anvil server  POST /v1/services
@@ -65,7 +65,7 @@ removed by leaving them out.
 | The service is `ready` and already has everything the request asks for | `200` with the service. Terraform doesn't run. |
 | The same, but the service was last applied with another catalog revision (`status.catalog_revision`), as after an upgrade | `202` with an operation that re-applies it at the same generation, so it converges on the current catalog. Its `changes` say what Terraform changed: all zero when the upgrade kept the service's resources as they were. |
 | The same request is already queued or running | `202` with that operation. Nothing is queued twice. |
-| A request that asks for more arrives while an apply runs (for example, it adds `-cloud=gcp`) | `202` with a new operation. It runs as soon as the current apply finishes. |
+| A request that asks for more arrives while an apply runs (for example, it adds `-deploy`) | `202` with a new operation. It runs as soon as the current apply finishes. |
 | The last apply `failed`, or the server stopped mid-apply | Repeating the request re-applies, and Terraform resumes from its state. Interrupted work also resumes on its own when the server restarts. |
 | A client retries with the same `Idempotency-Key` (the CLI sends one on every write) | The original operation, even after a force delete that would otherwise be a `404`. |
 

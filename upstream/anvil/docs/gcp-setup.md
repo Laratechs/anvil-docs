@@ -84,8 +84,11 @@ cloud     gcp       Cloud Run service   yes       public (bool)   project_id (st
 ```
 
 Changing the binding (`anvil binding update -set ... gcp-shared`) stores a
-new revision. Existing clouds keep the revision they were created with;
-only clouds created afterwards use the new one.
+new revision. Existing deployments keep the revision they were created
+with; only deployments created afterwards use the new one.
+`anvil service list` marks the services that are behind, and
+`anvil service migrate NAME` moves one to the new revision
+([Changing where deployments land](server.md#changing-where-deployments-land)).
 
 **Upgrading from settings.** Earlier releases took the project, region and provider
 from `settings "cloud_gcp"`. Keep them there for the first start of this
@@ -129,12 +132,57 @@ their next apply.
 A service can still choose for itself with its `public` option
 ([Public or private](gcp.md#public-or-private)).
 
+## Self-managed projects
+
+A service that wants to own its infrastructure asks for a self-managed
+deployment (`anvil service deploy -type=self-managed NAME`), and Anvil
+creates an empty GCP project for it: a cloud of its own. This is the
+catalog's `gcpproject` deployment, and it is offered once a valid
+`gcpproject` binding exists. Skip this section to offer only the
+platform.
+
+1. Choose the folder new projects are created in. Policies and access
+   you set on the folder apply to every project in it.
+2. Grant Anvil's GCP identity (step 3) **Project Creator**
+   (`roles/resourcemanager.projectCreator`) on the folder, and **Billing
+   Account User** (`roles/billing.user`) on the billing account.
+3. Create the binding:
+
+   ```
+   anvil binding create -provider=gcpproject \
+     -set folder_id=folders/123456789012 \
+     -set billing_account=000000-AAAAAA-000000 \
+     -set project_prefix=ex \
+     -set owner=group:engineering@example.com \
+     gcp-projects
+   ```
+
+   - `project_prefix`: project IDs are `<prefix>-<service>`, and are
+     unique across Google Cloud, so pick 1 to 4 lowercase letters and
+     digits of your own.
+   - `owner` (optional): an IAM member made Owner of each project.
+     Without it, access is whatever the folder grants.
+
+Anvil creates the project with no default network and nothing else, and
+`anvil service get` shows its ID and console link. What runs in it, and
+how the service's CI deploys there, is the service team's: Anvil sets no
+CI variables for it. A service has this or the Cloud Run deployment,
+never both, and can't switch.
+
+Anvil never deletes a team's project. A service with one can't be
+archived or force deleted until the project is decommissioned by hand.
+
+This definition has been tested with mock providers only; apply it to a
+test folder before offering it
+([#41](https://github.com/Laratechs/anvil/issues/41)).
+
 ## Known limitations
 
 - **Shared quota and blast radius.** Every service shares the project's
   quotas and its project-level IAM. Anyone with project-wide Run or
   Artifact Registry roles can change any service.
-- **Per-service GCP projects are gone.** Earlier catalogs gave each service
-  its own project. A service created that way fails its next apply (its
+- **Per-service projects from October 2026.** Early catalogs gave every
+  service its own project, with more in it than today's
+  [self-managed projects](#self-managed-projects). A service created that way fails its next apply (its
   project is protected from destroy); remove the old project from its
   Terraform state by hand, or archive it.

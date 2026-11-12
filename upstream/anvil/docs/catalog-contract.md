@@ -1,10 +1,22 @@
-# Anvil catalog contract v1
+# Anvil catalog contract
 
-Contract v1 is the only interface between the Anvil engine and a catalog.
-It is provisional until Anvil 1.0: it may still break during v0.x, and
-every break is listed under **Breaking catalog changes** in the
+The catalog contract is the only interface between the Anvil engine and a
+catalog. This document describes contract 2, the only version Anvil
+reads. It is provisional until Anvil 1.0: it may still break during
+v0.x, and every break is listed under **Breaking catalog changes** in the
 [changelog](../CHANGELOG.md). The decisions behind it are recorded in
-[#11](https://github.com/Laratechs/anvil/issues/11) and its sub-issues.
+[#11](https://github.com/Laratechs/anvil/issues/11),
+[#36](https://github.com/Laratechs/anvil/issues/36) and their sub-issues.
+
+**Deployments and clouds.** A catalog declares where a service runs with
+`deployment` blocks. A deployment is either platform-managed, on the shared
+infrastructure the platform team runs, or self-managed, in a cloud of the
+service's own such as a GCP project. A service has at most one. Some
+names predate deployments, from when every deployment was called a
+cloud: the `cloud_<name>` key, service bodies' `spec.clouds` and
+`status.clouds`, and a binding's `provider`, which is the deployment's
+name. Where this document says "cloud" for the engine's behavior, read
+"deployment".
 
 This document describes what Anvil implements. Where it and the code
 disagree, the code is right and this document is a bug.
@@ -14,11 +26,11 @@ disagree, the code is right and this document is a bug.
 The contract is the only thing a catalog may rely on from Anvil, and the
 only thing Anvil may rely on from a catalog.
 
-- **Anvil owns** the resources (services, their clouds, and cloud
+- **Anvil owns** the resources (services, their deployments, and cloud
   bindings), their lifecycle phases and state machine, the status
   vocabulary, the API and CLI, running Terraform, and generating each
   service's root module.
-- **A catalog owns** what a service and each cloud are made of: the
+- **A catalog owns** what a service and each deployment are made of: the
   schemas for settings, bindings and options; the providers its modules
   need and how binding values configure them; the Terraform modules
   (components) and their wiring; exports; and the values it reports for
@@ -34,14 +46,14 @@ naming the constraint and the actual version.
 ```hcl
 # catalog.hcl, at the catalog root
 catalog {
-  contract          = 1
+  contract          = 2
   requires_anvil    = ">= 0.1, < 0.2" # optional
   terraform_version = ">= 1.9"        # optional
 }
 ```
 
 - **`contract`** (required): Anvil supports a range of versions, today
-  1 to 1. A version outside the range is a load error that names the
+  2 to 2. A version outside the range is a load error that names the
   supported range.
 - **`requires_anvil`**: a version constraint checked against Anvil's
   release version. Anvil tags releases `vMAJOR.MINOR.PATCH` from v0.1.0;
@@ -75,12 +87,12 @@ catalog revision of its last successful apply: the commit SHA, or
 `local`. A service last applied by an Anvil that still built a catalog in
 keeps `builtin-<hash>` until its next apply.
 
-**Additive within v1** (Anvil may ship them without a contract version
-bump): new optional attributes or blocks, new names definitions may
+**Additive within a version** (Anvil may ship them without a contract
+version bump): new optional attributes or blocks, new names definitions may
 reference, new status keys, new manifest fields.
 
-**Breaking, needs v2** (after Anvil 1.0): removing or renaming anything in
-this document, changing a status key's meaning or type, making something
+**Breaking, needs a new version** (after Anvil 1.0): removing or renaming
+anything in this document, changing a status key's meaning or type, making something
 optional required, or changing generated root-module addresses
 (`module.<key>_<component>`), which would move Terraform state. Anvil will
 support the old version alongside the new one, so a catalog and Anvil
@@ -93,7 +105,7 @@ shape:
 
 ```
 catalog.hcl              required: the catalog block
-definitions/*.hcl        required: exactly one service block, any number of cloud blocks
+definitions/*.hcl        required: exactly one service block, any number of deployment blocks
 components/<name>/       optional: local Terraform modules
   main.tf                required for a local module
   anvil.json             optional: the component manifest
@@ -101,8 +113,8 @@ components/<name>/       optional: local Terraform modules
 
 - Definition files are read in name order. Only `definitions/*.hcl` is
   read; subdirectories are ignored.
-- The service is defined once, and each provider at most once, across all
-  files.
+- The service is defined once, and each deployment name at most once,
+  across all files.
 - A component's `module` is either a path starting `./` or `../`
   (resolved from the definition file; the directory must contain
   `main.tf`), or any other Terraform module source, such as `git::` or a
@@ -113,28 +125,46 @@ components/<name>/       optional: local Terraform modules
 
 ## Definition schema
 
-A definition file holds `service { ... }` and `cloud "<provider>" { ... }`
-blocks. The provider label must match `^[a-z][a-z0-9]{0,19}$`, the
-pattern the API accepts, so every cloud that loads can be requested.
+A definition file holds `service { ... }` and
+`deployment "<name>" { ... }` blocks. The name must match
+`^[a-z][a-z0-9]{0,19}$`, the pattern the API accepts, so every deployment
+that loads can be requested.
+
+```hcl
+deployment "gcp" {
+  type  = "platform-managed"
+  title = "Cloud Run service"
+  # binding, settings, options, providers, components, exports, status
+}
+```
 
 | Element | Kinds | Required | Meaning |
 | --- | --- | --- | --- |
-| `title` | both | no | Human name, such as "Cloud Run service". Defaults to the definition's name (`service`, `cloud "gcp"`). Anvil names the cloud by it in the API and CLI. |
-| `settings { }` | both | no | Operator values, as Terraform type constraints with `optional()` defaults. For the service, values every service shares; for a cloud, how its clouds are deployed wherever they land, such as the gcp `public` default. |
-| `binding { }` | cloud | no | The values a binding for this provider carries: where its clouds land, such as project and region. Same syntax as settings. An attribute may not be called `name`, which is the binding's own name. |
-| `options { }` | cloud | no | Requester choices for one service's cloud, same syntax as settings. |
-| `enabled_when` | cloud | no | A boolean expression over `settings` only; false hides the cloud. |
-| `provider "<name>" { source, version, config }` | both | at least `source` | A Terraform provider: `source` and `version` (a version constraint) are literal strings; `config` is an object of expressions. Each provider is declared by one definition only, once. |
+| `type` | deployment | yes | `"platform-managed"`: the service runs on the platform, the shared infrastructure the platform team runs, such as a Cloud Run service in the shared project. `"self-managed"`: the service gets a cloud of its own, such as a GCP project, which Anvil bootstraps and the service's team deploys into. A literal string. |
+| `title` | both | no | Human name, such as "Cloud Run service". Defaults to the definition's name (`service`, `deployment "gcp"`). Anvil names the deployment by it in the API and CLI. |
+| `settings { }` | both | no | Operator values, as Terraform type constraints with `optional()` defaults. For the service, values every service shares; for a deployment, how it is deployed wherever it lands, such as the gcp `public` default. |
+| `binding { }` | deployment | no | The values a binding for this deployment carries: where it lands, such as the platform's project and region, or the folder new projects are created in. Same syntax as settings. An attribute may not be called `name`, which is the binding's own name. |
+| `options { }` | deployment | no | Requester choices for one service's deployment, same syntax as settings. |
+| `enabled_when` | deployment | no | A boolean expression over `settings` only; false hides the deployment. |
+| `provider "<name>" { source, version, config }` | both | at least `source` | A Terraform provider: `source` and `version` (a version constraint) are literal strings; `config` is an object of expressions. A definition declares a provider once. A deployment can't declare one the service declares; two deployments may declare the same one (see below). |
 | `component "<name>" { module, inputs }` | both | at least one | A Terraform module: `module` is a literal string, `inputs` an object of expressions. Names are identifiers, unique per definition. |
-| `exports` | cloud | no | An object of strings offered to the service (see [Exports, archive and delete](#exports-archive-and-delete)). |
+| `exports` | deployment | no | An object of strings offered to the service (see [Exports, archive and delete](#exports-archive-and-delete)). |
 | `status { }` | both | no | Values for the status keys Anvil declares (see [Status](#status)). |
 | `lifecycle { archive_targets, destroy_on_delete, stateful }` | see [Exports, archive and delete](#exports-archive-and-delete) | no | Lists of definition-relative addresses. `archive_targets` is for the service only. |
 
-Any other attribute or block is a load error, including `options`,
-`binding`, `enabled_when` or `exports` on the service, `archive_targets`
-on a cloud, an unknown status key, and the old `keep_on_delete` (now
-`destroy_on_delete`). Literal-only fields (`title`, `source`, `version`,
-`module`, the lifecycle lists) are evaluated without variables.
+Any other attribute or block is a load error, including `type`, `options`,
+`binding`, `enabled_when` or `exports` on the service, a deployment
+without a `type`, a `cloud` block, `archive_targets` on a deployment, an
+unknown status key, and the old `keep_on_delete` (now
+`destroy_on_delete`). Literal-only fields (`type`, `title`, `source`,
+`version`, `module`, the lifecycle lists) are evaluated without variables.
+
+**Providers shared by deployments.** A managed deployment and a cloud on
+the same provider both need its Terraform provider, configured
+differently, so two deployments may each declare it. A service's root
+module configures each provider once, and a service has one deployment,
+so the two never meet. A service from before that rule with two
+deployments that declare the same provider fails to render, naming both.
 
 ## Names a definition may reference
 
@@ -149,22 +179,25 @@ is a load error.
 | `anvil.lifecycle` | both | `"active"` or `"archived"` | `var.anvil.lifecycle` |
 | `anvil.org` | both | The GitHub organization Anvil serves | `var.anvil.org` |
 | `settings.<x>` | both | This definition's settings, defaults applied | `var.settings.<key>.<x>` |
-| `binding.name` | cloud with a `binding { }` block | The name of the binding this cloud uses | `var.binding.<key>.name` |
-| `binding.<x>` | cloud with a `binding { }` block | A value of the binding revision this cloud uses, defaults applied; `<x>` must be declared in the block | `var.binding.<key>.<x>` |
-| `options.<x>` | cloud | This cloud's options, defaults applied; an unset option without a default is `null` | `var.options.<key>.<x>` |
+| `binding.name` | deployment with a `binding { }` block | The name of the binding this deployment uses | `var.binding.<key>.name` |
+| `binding.<x>` | deployment with a `binding { }` block | A value of the binding revision this deployment uses, defaults applied; `<x>` must be declared in the block | `var.binding.<key>.<x>` |
+| `options.<x>` | deployment | This deployment's options, defaults applied; an unset option without a default is `null` | `var.options.<key>.<x>` |
 | `component.<c>.<output>` | both | An output of a component in the same definition | `module.<key>_<c>.<output>` |
-| `children.cloud` | service | A list with one `{ provider, binding, exports }` per cloud the service has; `binding` is `{ name, revision }`, or `null` for a cloud whose definition has no `binding { }` block | `local.children_cloud` |
+| `children.deployment` | service | A list with one `{ name, type, binding, exports }` per deployment the service has; `binding` is `{ name, revision }`, or `null` for a deployment whose definition has no `binding { }` block | `local.children_cloud` |
 
-`<key>` is `service` or `cloud_<provider>`. All of Terraform's functions
+`<key>` is `service` or `cloud_<name>`. A deployment's key keeps the
+`cloud_` prefix contract 1 gave it, in generated addresses and in the
+server's `settings "<key>" { }` blocks, so that moving a catalog to
+contract 2 moved no Terraform state. All of Terraform's functions
 are available, except in `enabled_when`, which Anvil evaluates itself with
 only `length`, `contains` and `lower`.
 
-A provider's `config` in a cloud may use only `anvil.*` and `binding.*`,
+A provider's `config` in a deployment may use only `anvil.*` and `binding.*`,
 so one binding revision always configures the provider the same way. The
 service's provider config has no such limit.
 
-A definition cannot reference another cloud's components, binding or
-options. Clouds reach the service only through exports.
+A definition cannot reference another deployment's components, binding or
+options. Deployments reach the service only through exports.
 
 ## Settings, bindings and options
 
@@ -175,8 +208,8 @@ it.
 | Value | Declared in | Supplied by | Answers | Where it lives |
 | --- | --- | --- | --- | --- |
 | Setting | `settings { }` in any definition | Operator | How every service, or every cloud of a provider, is deployed | Server configuration, `settings "<key>" { }` or the `ANVIL_SETTINGS` JSON file |
-| Binding | `binding { }` in a cloud definition | Operator | Where a provider's clouds land | A cloud binding resource in Anvil |
-| Option | `options { }` in a cloud definition | Requester | What one service's cloud chooses | Stored on the service |
+| Binding | `binding { }` in a deployment definition | Operator | Where its deployments land | A cloud binding resource in Anvil, for the provider named after the deployment |
+| Option | `options { }` in a deployment definition | Requester | What one service's deployment chooses | Stored on the service |
 
 ### Settings
 
@@ -221,17 +254,22 @@ block takes no binding.
   while its `enabled_when` (if any) holds and at least one valid binding
   exists for its provider; `GET /v1/catalog` says which is missing.
 - A new cloud records the binding it lands with and that binding's latest
-  revision. Requesters choose it with `-binding` on `anvil cloud create`
-  and `anvil service create -cloud`
-  (`anvil cloud create -service=orders -binding=gcp-shared gcp`), or
+  revision. Requesters choose it with `-binding` on `anvil service deploy`
+  and `anvil service create`
+  (`anvil service deploy -binding=gcp-shared orders`), or
   `binding` in the API request. Without one, the provider's only valid
   binding is used; none, or several, is a field error.
 - Bindings are versioned. Updating one stores a new, immutable revision,
   which clouds created afterwards use. Existing clouds keep the revision
   they recorded, and applies, archives and force deletes render with it,
   so a binding update never re-applies running services. An existing
-  cloud keeps its binding: naming another is a `409`. Moving an existing
-  cloud to a newer revision is not part of v1.
+  cloud keeps its binding: naming another is a `409`.
+- An operator moves a service to its binding's latest revision with
+  `anvil service migrate`, one service at a time. It records the latest
+  revision and applies the service, so Terraform changes, or replaces,
+  whatever the new values touch. The latest revision must be valid. A
+  service body lists the deployments that are behind under
+  `binding_updates`.
 - Binding defaults are applied when a cloud renders, not stored, so a
   catalog that changes a `binding { }` default changes existing clouds on
   their next apply, as for options.
@@ -253,7 +291,7 @@ block takes no binding.
 ### Options
 
 - Requesters set options with `-option name=value` on
-  `anvil service create -cloud` and `anvil cloud create`, or `options` in
+  `anvil service create` and `anvil service deploy`, or `options` in
   the API request. An unknown name or a value of the wrong type is
   rejected with a field error listing the valid names.
 - Anvil stores only what the requester chose. Defaults are applied at
@@ -265,7 +303,7 @@ block takes no binding.
   the service's `status.warnings`, until an apply no longer finds it.
 
 `GET /v1/catalog` (`anvil catalog show`) lists each definition's title,
-components, whether it can be requested and why not, each option's name,
+`type`, components, whether it can be requested and why not, each option's name,
 type and default, and each binding schema. It never shows settings
 values.
 
@@ -287,11 +325,11 @@ was after a failed one.
 | `ci_commit` | string, a commit SHA | After an apply, the CLI waits for GitHub Actions runs on this commit before reporting the service deployed. Needs `repository_url` and a cloud with a `url`. |
 | `image` | string, an image reference without a tag | Shown by `service get`. On force delete, if it is `ghcr.io/<org>/<package>`, Anvil deletes that package first, or prints the command to when its GitHub identity can't. |
 
-**Cloud** (`status { }` in each cloud definition)
+**Deployment** (`status { }` in each deployment definition)
 
 | Key | Type | What Anvil does with it |
 | --- | --- | --- |
-| `provider` | string | Defaults to the cloud's provider label. Set it only to that label: Anvil doesn't check it. |
+| `provider` | string | Defaults to the deployment's name. Set it only to that name: Anvil doesn't check it. |
 | `kind` | string | Stored and returned by the API, such as `cloud_run_service`. Not interpreted. |
 | `id` | string | The cloud's identifier, shown by the CLI and in delete summaries. |
 | `url` | string | Where the service answers. The first cloud with a `url` is the deploy target: the CLI waits for CI and prints it. |
@@ -304,10 +342,10 @@ service reports no cloud in `status.clouds`, as its clouds are torn down.
 
 ## Exports, archive and delete
 
-**Exports.** A cloud's `exports` is an object of strings it offers its
-service; without one it exports `{}`. The service sees every cloud it has
-as `children.cloud`, a list of `{ provider, binding, exports }`, and
-decides what to do with them. The Laratechs catalog merges them into the
+**Exports.** A deployment's `exports` is an object of strings it offers
+its service; without one it exports `{}`. The service sees every
+deployment it has as `children.deployment`, a list of
+`{ name, type, binding, exports }`, and decides what to do with them. The Laratechs catalog merges them into the
 repository's Actions variables.
 
 **Lifecycle addresses** are written relative to the definition: a
@@ -379,7 +417,7 @@ and `terraform.tfvars.json` into its work directory, then runs
 - There is one root module per service, holding the service definition
   and each of its clouds, and one Terraform state per service.
 - Module addresses are `module.<key>_<component>`. Renaming a component or
-  a cloud moves state, so it is a migration for the catalog, not a free
+  a deployment moves state, so it is a migration for the catalog, not a free
   change.
 - Status blocks become outputs named `service` and `cloud_<provider>`;
   exports become `local.cloud_<provider>_exports`.
@@ -406,9 +444,34 @@ ref and caches it under the data directory, once per commit. If the
 remote is unreachable at start, Anvil loads the commit it last fetched for
 that ref, and logs a warning.
 
+## Requesting a deployment
+
+Requesters ask for a deployment by type, with `anvil service deploy`
+(`-type=platform-managed`, the default, or `-type=self-managed`) or
+`anvil service create -deploy`. Anvil picks the deployment of that type
+the catalog offers: one that is enabled and, if its definition takes a
+binding, has a valid one. A catalog that offers several of a type makes
+requesters name one (`-deployment=<name>`), so most catalogs offer one of
+each. A service has one deployment, and its type can't change.
+
+## Moving from contract 1
+
+Contract 1 declared where a service runs with `cloud "<provider>"` blocks
+without a type, and Anvil no longer reads it. To move a catalog: set
+`contract = 2`, rename each `cloud "<provider>"` block to
+`deployment "<provider>"` with the same label, give it a `type`, and read
+`children.deployment` (whose entries have `name` where they had
+`provider`) in the service. Keeping the labels keeps every generated
+address, so existing services re-apply with no Terraform changes.
+
 ## Known limitations
 
-V1 knowingly couples Anvil to GitHub and to its server environment.
+- **A deployment's type is fixed.** A service can't move from a
+  platform-managed deployment to a self-managed one, or back.
+- **Old names.** Service bodies and generated names still say `cloud`
+  for a deployment, as described at the top.
+
+Contract 2 knowingly couples Anvil to GitHub and to its server environment.
 [#33](https://github.com/Laratechs/anvil/issues/33) tracks each limitation
 and possible solutions.
 
@@ -420,7 +483,7 @@ and possible solutions.
 - **Credentials.** Provider credentials come from the server's
   environment, not from bindings, so one Anvil server holds one identity
   per provider. Bindings that need different identities, such as two GCP
-  organizations, are not supported in v1.
+  organizations, are not supported.
 - **Undeclared options.** A stored option the catalog no longer declares
   can't be removed through the API yet: the option check rejects unknown
   names, `null` included.

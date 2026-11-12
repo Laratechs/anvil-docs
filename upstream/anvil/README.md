@@ -8,7 +8,9 @@ Anvil is the Laratechs Internal Developer Platform. Today it covers the
   publishes a versioned container image.
 - Optionally, Anvil also gives the service a **Cloud Run service** in the
   organization's shared GCP project, which its CI deploys to
-  ([Running services on Cloud Run](docs/gcp.md)), or an **AWS account**.
+  ([Running services on Cloud Run](docs/gcp.md)). A service that wants
+  to own its infrastructure gets an empty **GCP project** of its own
+  instead ([self-managed projects](docs/gcp-setup.md#self-managed-projects)).
 
 Services have no owner: they belong to the organization, and any active
 member can create, change or archive any of them. Anvil grants no team

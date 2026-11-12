@@ -1,25 +1,37 @@
 # Anvil
 
-Anvil is the Laratechs Internal Developer Platform: engineers ask it for services and the cloud environments that go with them.
+Anvil is the Laratechs Internal Developer Platform: engineers ask it for services and, when a service needs one, somewhere for it to run.
 
 ## Language
 
 **Service**:
-A named, deployable unit of software that Anvil provisions and keeps in its desired state. A service has no owner; it belongs to the organization.
+A named, deployable unit of software that Anvil provisions and keeps in its desired state. It has exactly one repository, which belongs to no other service. A service has no owner; it belongs to the organization.
 _Avoid_: App, project, owned service
 
+**Deployment**:
+Where a service runs, if anywhere. It is either **platform-managed**, on the platform, or **self-managed**, in the service's own cloud. A service has at most one, and its type can't change once chosen. A service without one can get either later.
+_Avoid_: Environment, cloud (for a platform-managed deployment)
+
+**Platform**:
+The shared infrastructure the platform team runs for platform-managed deployments, such as the organization's shared GCP project, where each service gets a Cloud Run service with its image repository and identities.
+_Avoid_: Environment, shared project
+
 **Cloud**:
-Where one service runs, on one provider, created by Anvil for that service. On GCP it is a Cloud Run service (with its image repository and identities) in the organization's shared project, which its cloud binding names, not a project of its own. A service has at most one cloud per provider.
-_Avoid_: Project, environment, GCP project
+A provider account Anvil creates for one service with a self-managed deployment, such as a GCP project. Anvil bootstraps it, and everything inside it is the service team's.
+_Avoid_: Environment, project, account, and "cloud" for a platform-managed deployment
 
 **Cloud binding**:
-Where one provider's clouds land, such as the shared GCP project, region and Workload Identity provider. The platform team (the operator) manages bindings in Anvil; the catalog declares what a provider's binding carries. Bindings are versioned: a change is a new revision, and each cloud keeps the revision it was created with, so changing a binding never moves existing clouds. A cloud whose catalog definition takes a binding is that definition plus a binding revision.
-_Avoid_: Settings (for where clouds land), project, account, target
+Where a deployment lands: the platform's project, region and Workload Identity provider, or where new clouds are created. The platform team (the operator) manages bindings in Anvil; the catalog declares what each deployment's binding carries. Bindings are versioned: a change is a new revision, and each deployment keeps the revision it was created with, so changing a binding never moves existing deployments. The platform team moves a service to the latest revision by migrating it, one service at a time.
+_Avoid_: Settings (for where deployments land), project, account, target
 
 **Setting**:
-A value the platform team (the operator) gives a catalog definition, saying how something is deployed for every service, such as whether Cloud Run services are public by default. Where clouds land is a cloud binding, not a setting.
+A value the platform team (the operator) gives a catalog definition, saying how something is deployed for every service, such as whether Cloud Run services are public by default. Where deployments land is a cloud binding, not a setting.
 _Avoid_: Config, option, binding
 
 **Option**:
-A choice a requester makes for one service's cloud, declared by the catalog and stored on the service, such as whether a Cloud Run service is public. An option not chosen takes the catalog's default.
+A choice a requester makes for one service's deployment, declared by the catalog and stored on the service, such as whether a Cloud Run service is public. An option not chosen takes the catalog's default.
 _Avoid_: Setting, binding, flag, parameter
+
+## Names from before deployments
+
+Until November 2026 every deployment was called a cloud. Some names keep the old word so that stored records and Terraform state didn't have to move: `spec.clouds` and `status.clouds` in service records and API bodies, the `cloud_<name>` key in generated Terraform and in `settings "<key>"` blocks, a binding's `provider` (the deployment's name), and Go identifiers such as `CloudProvider`. Read them as "deployment".
