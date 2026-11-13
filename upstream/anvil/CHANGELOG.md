@@ -13,6 +13,14 @@ listed under **Breaking changes**.
 
 ### Breaking catalog changes
 
+- **Catalog contract 3 adds add-ons.** A catalog that sets
+  `contract = 3` may declare `addon "<name>"` blocks: an `instance` shared
+  by every service on one binding and a `tenant` per service
+  ([Add-ons](docs/catalog-contract.md#add-ons-contract-3)). Contract 2
+  still loads. The generated root module gains the variable `instance`,
+  which a definition can't name, and `addon_<name>` keys in `settings` and
+  `options`, which a deployment can't be named (#42).
+
 - **Catalog contract 2 replaces contract 1,** which Anvil no longer
   reads. Where a service runs is declared with
   `deployment "<name>" { type = ... }` in place of `cloud "<provider>"`;
@@ -180,6 +188,17 @@ listed under **Breaking changes**.
 
 ### What's in it
 
+- **Add-ons, starting with a database.** `anvil service addon add
+  postgres NAME` gives a service with a platform-managed deployment a
+  tenant on a shared PostgreSQL instance, created with the first tenant
+  and deleted with the last; `anvil service addon remove` deletes the
+  tenant and its data, after a confirmation, and `anvil addon list` shows
+  the instances and their tenants. A service with an add-on can't be
+  archived, and a force delete warns about its data. The API gains
+  `POST`/`DELETE /v1/services/{name}/addons/{addon}` and `GET /v1/addons`;
+  operations have a new step, `waiting`, while an instance is created.
+  `anvil catalog render` takes `-addon`, `-instance-outputs` and
+  `-instance` (#42).
 - **Self-managed GCP projects.** Catalog v0.3.0 has `gcpproject`:
   `anvil service deploy -type=self-managed NAME` gives a service a GCP
   project of its own, in the folder a `gcpproject` binding names, with an

@@ -205,6 +205,66 @@ template's `push` job hasn't run on GitHub; apply it to a test folder
 before offering it
 ([#41](https://github.com/Laratechs/anvil/issues/41)).
 
+## The postgres add-on
+
+`anvil service addon add postgres NAME` gives a service on the platform a
+PostgreSQL database. This is the catalog's `addon "postgres"` (catalog
+contract 3). Services on one gcp binding share a Cloud SQL instance in
+the shared project, which Anvil creates when the first service attaches
+the add-on (several minutes) and deletes when the last one removes it.
+Each service gets a database named after it, owned by its runtime
+identity (`run-<service>`), which logs in with IAM database
+authentication: no password exists, and no other service can connect to
+it.
+
+1. Enable the **Cloud SQL Admin API** (`sqladmin.googleapis.com`) in the
+   shared project.
+2. Grant Anvil's GCP identity (step 3), on the shared project:
+
+   | Role | Why |
+   | --- | --- |
+   | `roles/cloudsql.admin` | Create and delete the instance and its IAM users |
+   | `roles/resourcemanager.projectIamAdmin` | Grant the instance's admin and each service's runtime identity Cloud SQL access to that instance only |
+
+   It already creates service accounts and grants who may use them
+   (`roles/iam.serviceAccountAdmin`), which covers the instance's admin
+   identity, `pgadmin-<hash>`, that Anvil impersonates to create each
+   service's database.
+3. Let the server reach the instance. Anvil creates each database over a
+   connection to the instance, with the Cloud SQL connector, as the admin
+   identity. The instance has a public IP with no authorized networks, so
+   the connector (IAM-authenticated, over TLS) is the only way in; the
+   server needs outbound HTTPS and port 3307 to Google. The PostgreSQL
+   provider finds credentials through `GOOGLE_APPLICATION_CREDENTIALS`,
+   so set it to a credentials file for Anvil's identity in the server's
+   environment.
+4. Optionally, set how instances run, for every service, in the server's
+   configuration:
+
+   ```hcl
+   settings "addon_postgres" {
+     tier              = "db-custom-2-7680" # default db-f1-micro
+     database_version  = "POSTGRES_16"      # the default
+     high_availability = true               # default false
+   }
+   ```
+
+The service's repository gets `ANVIL_DB_INSTANCE` (the instance's
+connection name), `ANVIL_DB_NAME` and `ANVIL_DB_USER`; the service
+connects with a Cloud SQL connector as its runtime identity, with IAM
+authentication enabled.
+
+**Deleting.** `anvil service addon remove postgres NAME` and
+`anvil service delete -force NAME` drop the service's database with its
+data, after a warning and the service name. PostgreSQL won't drop a
+database with open connections, so stop the service's connections first,
+or retry the request once they're gone. Archiving a service with the
+add-on is refused. The instance has backups, which go with it.
+
+This definition has been tested with mock providers only; apply it in a
+test project before offering it
+([#42](https://github.com/Laratechs/anvil/issues/42)).
+
 ## Known limitations
 
 - **Shared quota and blast radius.** Every service shares the project's

@@ -14,6 +14,9 @@ anvil service deploy orders                                   # give an existing
 anvil service deploy -type=self-managed orders                # or a cloud of its own instead; a deployment's type can't change
 anvil service deploy -binding=gcp-eu orders                   # choose where it lands when there are several bindings
 anvil service deploy -option public=false orders              # make its Cloud Run service require authentication (public by default)
+anvil service addon add postgres orders                       # a database on the platform, shared instance, a tenant of its own
+anvil service addon remove postgres orders                    # delete its tenant and data (the instance goes with its last tenant)
+anvil addon list                                              # add-ons, their shared instances and tenants
 anvil service get orders                                      # the service, and its deployment with its options and binding
 anvil service list
 anvil service create -wait=false orders                       # don't wait; prints the operation
@@ -38,6 +41,14 @@ A deployment is where a service runs. It is **platform-managed** (the
 default: on the platform, the shared infrastructure the platform team
 runs) or **self-managed** (a cloud of the service's own, which you deploy
 into yourself). A service has at most one, and its type can't change.
+
+An **add-on** is extra infrastructure on a platform-managed deployment,
+such as a database. Every service that attaches it shares one instance
+(per binding), and gets a tenant of its own there. The first service to
+attach an add-on waits for the instance, which can take several minutes;
+the last one to remove it takes the instance with it. A service with an
+add-on can't be archived: remove the add-on first, or delete the service
+with `-force`, which names the data that goes.
 
 Run `anvil` (or any group, such as `anvil service`) with no arguments to list
 its commands, and add `-help` to any command for its usage, options and

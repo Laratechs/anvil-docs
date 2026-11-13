@@ -10,8 +10,11 @@ response carries an `Anvil-Version` header.
 | `GET /v1/services/{name}` | | `200` service, with an `ETag` |
 | `DELETE /v1/services/{name}?confirm={name}[&force=true]` | | `200` if unchanged, `202` operation queued |
 | `POST /v1/services/{name}/deployment` | `{"type"?,"deployment"?,"options"?,"binding"?}` | `200` if unchanged, `202` operation queued, `409` for another type or a second deployment |
+| `POST /v1/services/{name}/addons/{addon}` | `{"options"?}` | `200` if unchanged, `202` operation queued, `409` for a service without a platform-managed deployment the add-on attaches to |
+| `DELETE /v1/services/{name}/addons/{addon}?confirm={name}` | | `200` if unchanged (including an add-on the service doesn't have), `202` operation queued |
+| `GET /v1/addons` | | `200` `{"addons": [...]}`: each add-on's `name`, `title`, `deployments` and `instances` |
 | `POST /v1/services/{name}/migrate?confirm={name}` | | `200` if unchanged, `202` operation queued, `409` if the binding's latest revision isn't valid |
-| `GET /v1/operations/{id}[?wait=60s&revision=N]` | | `200` operation; with `wait`, long-polls (up to 5 minutes) until its `revision` differs from `N` (default: the current one), for example when it starts running, makes progress or finishes. A running operation has a `step` (`rendering`, `initializing`, `applying`, `deleting`, `finishing`) and, while applying, `progress` (`done`, `total`, `current`), updated at most every 2 seconds. A succeeded apply has `changes` (`add`, `change`, `destroy`, `import`), Terraform's count of what it changed |
+| `GET /v1/operations/{id}[?wait=60s&revision=N]` | | `200` operation; with `wait`, long-polls (up to 5 minutes) until its `revision` differs from `N` (default: the current one), for example when it starts running, makes progress or finishes. A running operation has a `step` (`rendering`, `initializing`, `applying`, `deleting`, `finishing`, or `waiting` for an add-on's instance) and, while applying, `progress` (`done`, `total`, `current`), updated at most every 2 seconds. A succeeded apply has `changes` (`add`, `change`, `destroy`, `import`), Terraform's count of what it changed |
 | `POST /v1/bindings` | `{"name","provider","values"?}` | `201` binding with a new revision (`Location: /v1/bindings/{name}?revision=N`), `200` if unchanged |
 | `PATCH /v1/bindings/{name}` | `{"values"}` (`null` removes a value) | `201` new revision, `200` if unchanged |
 | `GET /v1/bindings` | | `200` `{"bindings": [...]}`, each at its latest revision |
@@ -45,6 +48,21 @@ still list it under `spec.clouds` and `status.clouds`, from when a
 deployment was called a cloud. Each entry of `status.clouds` has its
 `type`. Archiving a service whose deployment is self-managed and can be
 deleted is a `409`: only `force=true` deletes its cloud.
+
+An **add-on** is extra infrastructure on a platform-managed deployment,
+such as a database. Services that attach it on one binding share an
+instance, and each gets a tenant: `spec.addons` holds the add-ons
+attached, by name, with their options, and `status.addons` the tenants the
+service may have (`name`, `instance`), and the tenant's stateful resources
+are listed under `stateful` with `addon`. The first attach waits for the
+instance to be created; meanwhile the operation's step is `waiting` and
+the service's `Reconciling` condition has reason `WaitingForAddon`. A
+detach destroys the tenant and its data, so it needs `confirm`. Archiving
+a service with an add-on is a `409`. In `GET /v1/addons`, each instance
+has `name` (`<addon>-<binding>`), `resource_name`, `deployment`,
+`binding`, `phase` (`provisioning`, `ready`, `failed`, `deleting`),
+`message` and `tenants`, counted from the services now; its outputs are
+not shown.
 
 A cloud binding says where one provider's clouds land. Binding bodies have
 `kind` (`CloudBinding`), `name`, `revision`, `spec` (`provider`, `values`),

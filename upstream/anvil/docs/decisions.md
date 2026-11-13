@@ -46,6 +46,18 @@ Anvil is before 1.0, so some of these will change; the
   serving the new repository's code. A project per service is offered
   only as the self-managed deployment, and empty: scaffolding one for
   every service was far more than the workflow needs.
+- **Add-ons:** Extra infrastructure on a platform-managed deployment, the
+  first being a PostgreSQL database
+  ([#42](https://github.com/Laratechs/anvil/issues/42)). One instance per
+  binding is shared, and each service gets a tenant of its own: a
+  database and a role only its runtime identity can use, with no
+  password. The instance has a record and a Terraform state of its own;
+  each tenant stays in its service's state. Anvil creates the instance
+  with the first tenant and deletes it with the last, counting tenants
+  from service records rather than storing a count. Archiving a service
+  with an add-on is refused, since a restore couldn't bring the data
+  back; a force delete or a detach deletes the tenant and says so.
+  Self-managed services build their own.
 
 ## Known limitations
 
@@ -54,6 +66,16 @@ Anvil is before 1.0, so some of these will change; the
   only on paid plans, so a pull request can be merged with failing CI. A
   catalog for an organization on such a plan can add it to its repository
   component.
+- **Add-on instances aren't migrated.** An instance keeps the binding
+  revision it was created with until its last tenant leaves; nothing moves
+  it to a newer one.
+- **Anvil reaches add-on instances over the network.** A tenant's
+  database and role are created over a SQL connection from the Anvil
+  server, because the provider's API alone can't keep one tenant out of
+  another's database. The server needs network access to each instance.
+- **Catalog contract 2 is still read.** Contract 3 adds add-ons; the
+  pinned catalog moves to it with the add-on's release, and contract 2
+  goes after that.
 - **Single instance.** State lives in the data directory, and leases are held
   in memory, so run one `anvil server` with a persistent data directory.
   Terraform's state lock still guards against two servers applying at once.

@@ -20,6 +20,18 @@ _Avoid_: Environment, shared project
 A provider account Anvil creates for one service with a self-managed deployment, such as a GCP project. Anvil bootstraps it, and everything inside it is the service team's.
 _Avoid_: Environment, project, account, and "cloud" for a platform-managed deployment
 
+**Add-on**:
+Extra infrastructure a service adds to its platform-managed deployment, such as a database, which the platform team maintains in the catalog. A self-managed service builds its own in its cloud.
+_Avoid_: Plugin, extension, service (for an add-on)
+
+**Add-on instance**:
+The infrastructure every service that attaches an add-on on one cloud binding shares, such as a database server. Anvil creates it when the first service attaches the add-on, and deletes it when the last tenant is gone.
+_Avoid_: Shared instance (in names), cluster, server
+
+**Tenant**:
+What one service gets on an add-on instance, such as a database and a user only its runtime identity can use. It lives in the service's own state; removing the add-on or force deleting the service deletes it, with its data.
+_Avoid_: Database (for the tenant as a whole), slot
+
 **Cloud binding**:
 Where a deployment lands: the platform's project, region and Workload Identity provider, or where new clouds are created. The platform team (the operator) manages bindings in Anvil; the catalog declares what each deployment's binding carries. Bindings are versioned: a change is a new revision, and each deployment keeps the revision it was created with, so changing a binding never moves existing deployments. The platform team moves a service to the latest revision by migrating it, one service at a time.
 _Avoid_: Settings (for where deployments land), project, account, target

@@ -1,12 +1,14 @@
 # Anvil catalog contract
 
 The catalog contract is the only interface between the Anvil engine and a
-catalog. This document describes contract 2, the only version Anvil
-reads. It is provisional until Anvil 1.0: it may still break during
+catalog. This document describes contract 3, which adds
+[add-ons](#add-ons-contract-3) to contract 2; Anvil reads both, and a
+contract 2 catalog is a contract 3 catalog without add-ons. It is provisional until Anvil 1.0: it may still break during
 v0.x, and every break is listed under **Breaking catalog changes** in the
 [changelog](../CHANGELOG.md). The decisions behind it are recorded in
 [#11](https://github.com/Laratechs/anvil/issues/11),
-[#36](https://github.com/Laratechs/anvil/issues/36) and their sub-issues.
+[#36](https://github.com/Laratechs/anvil/issues/36) and their sub-issues,
+and for add-ons in [#42](https://github.com/Laratechs/anvil/issues/42).
 
 **Deployments and clouds.** A catalog declares where a service runs with
 `deployment` blocks. A deployment is either platform-managed, on the shared
@@ -46,14 +48,14 @@ naming the constraint and the actual version.
 ```hcl
 # catalog.hcl, at the catalog root
 catalog {
-  contract          = 2
+  contract          = 3
   requires_anvil    = ">= 0.1, < 0.2" # optional
   terraform_version = ">= 1.9"        # optional
 }
 ```
 
 - **`contract`** (required): Anvil supports a range of versions, today
-  2 to 2. A version outside the range is a load error that names the
+  2 to 3. A version outside the range is a load error that names the
   supported range.
 - **`requires_anvil`**: a version constraint checked against Anvil's
   release version. Anvil tags releases `vMAJOR.MINOR.PATCH` from v0.1.0;
@@ -450,6 +452,99 @@ ref and caches it under the data directory, once per commit. If the
 remote is unreachable at start, Anvil loads the commit it last fetched for
 that ref, and logs a warning.
 
+## Add-ons (contract 3)
+
+An **add-on** is extra infrastructure a service adds to its
+platform-managed deployment, such as a database, which the platform team
+maintains in the catalog. Every service that attaches an add-on on one
+binding shares one **instance** of it, and each gets a **tenant** of its
+own on that instance. Anvil creates the instance when the first service
+attaches the add-on and destroys it when the last tenant is gone.
+
+```hcl
+addon "postgres" {
+  title       = "PostgreSQL database"
+  deployments = ["gcp"]            # platform-managed deployments it attaches to
+
+  settings { tier = optional(string, "db-f1-micro") }  # the operator's, for instance and tenants
+  options  { extensions = optional(list(string), []) } # a requester's, for one tenant
+
+  instance {                       # one per binding, in a state of its own
+    provider "google" { source = "hashicorp/google", config = { project = binding.project_id } }
+    component "server" {
+      module = "../components/cloudsql-instance"
+      inputs = { name = anvil.name, project_id = binding.project_id, tier = settings.tier }
+    }
+    outputs = { connection_name = component.server.connection_name }
+  }
+
+  tenant {                         # one per service, in the service's state
+    provider "postgresql" { source = "cyrilgdn/postgresql", config = { host = instance.connection_name } }
+    component "database" {
+      module = "../components/cloudsql-tenant"
+      inputs = { service = anvil.name, instance = instance.connection_name }
+    }
+    exports = { ANVIL_DB_NAME = component.database.name }
+  }
+
+  lifecycle { stateful = ["database.postgresql_database.this"] }
+}
+```
+
+- **`deployments`** (required) names platform-managed deployments. A
+  self-managed service, or one without a deployment, is refused the
+  add-on. The add-on's name may not be a deployment's.
+- **`settings`** and **`options`** work as a deployment's. Settings are
+  set in `settings "addon_<name>"` and reach both parts; options reach
+  the tenant only.
+- **`instance`** holds `provider` and `component` blocks and `outputs`,
+  an object its tenants read. It may use `anvil` (`anvil.name` is the
+  instance's own name, `<addon>-<binding>-<random>`, new each time the
+  instance is created, because a provider may keep a deleted resource's
+  name for days), `settings`, `binding` (the binding of the deployment it
+  lands on: every listed deployment must declare each attribute it uses)
+  and `component`. Its provider configurations may use only `anvil` and
+  `binding`. Outputs are recorded on the instance and are not shown in the
+  API, but don't put secrets in them: store a secret where the tenant's
+  provider can read it, and output its name.
+- **`tenant`** holds `provider` and `component` blocks and `exports`. It
+  may use `anvil` (the service), `settings`, `options`, `instance.<output>`
+  and `component`. Its provider configurations may use only `anvil` and
+  `instance`. It uses the service's and its deployment's providers
+  without declaring them, and may not redeclare one. Its exports are
+  merged into its deployment's, so CI gets them as repository variables.
+- **`lifecycle`** may only set `stateful`, addresses in the tenant.
+  Anvil destroys all of a tenant when it goes.
+
+**Engine behaviour.**
+
+- An instance is keyed by add-on and binding: `<addon>-<binding>`, or
+  `<addon>-<deployment>` for a deployment without a binding block. It
+  records the binding revision it was created with, and isn't migrated.
+- The instance's root module is in the server's data directory under
+  `instances/<name>`, with the backend prefix beside the services' (the
+  default `anvil/services` gives `anvil/instances/<name>`). Its outputs are
+  the root output `instance`, marked sensitive.
+- A tenant renders in the service's root module as
+  `module.addon_<name>_<component>`, with the instance's outputs as
+  `var.instance.addon_<name>`. A service waits, without failing, until
+  its instance is ready: its operations stay running with step
+  `waiting`, and the instance queues it when ready. The first attach
+  takes as long as creating the instance. If the instance's apply fails,
+  the requests waiting for it fail with its error; repeating one retries
+  the instance, as does a server restart.
+- A detach renders the tenant's providers without its components, so the
+  apply destroys it. A force delete destroys the tenant with the rest.
+  Archiving a service with an add-on is refused: an archive would destroy
+  the data, and a restore couldn't bring it back.
+- The instance's tenants are counted from service records, never stored:
+  a service whose spec attaches the add-on while active, or whose status
+  records a tenant on it (one being destroyed, or partly applied). The
+  instance is applied when it isn't ready or the catalog changed, and
+  destroyed when the count is zero. Before destroying it, Anvil marks it
+  deleting and counts again, so a service attaching meanwhile is either
+  counted or waits for a new instance.
+
 ## Requesting a deployment
 
 Requesters ask for a deployment by type, with `anvil service deploy`
@@ -459,6 +554,11 @@ the catalog offers: one that is enabled and, if its definition takes a
 binding, has a valid one. A catalog that offers several of a type makes
 requesters name one (`-deployment=<name>`), so most catalogs offer one of
 each. A service has one deployment, and its type can't change.
+
+## Moving to contract 3
+
+Nothing changes for a contract 2 catalog that sets `contract = 3`; it can
+then declare add-ons. Anvil still reads contract 2.
 
 ## Moving from contract 1
 
@@ -476,6 +576,10 @@ address, so existing services re-apply with no Terraform changes.
   platform-managed deployment to a self-managed one, or back.
 - **Old names.** Service bodies and generated names still say `cloud`
   for a deployment, as described at the top.
+- **Instances aren't migrated.** An add-on instance keeps the binding
+  revision it was created with until it has no tenants left.
+- **One add-on instance per binding.** Tenants of one add-on on one
+  binding always share an instance; a catalog can't ask for more.
 
 Contract 2 knowingly couples Anvil to GitHub and to its server environment.
 [#33](https://github.com/Laratechs/anvil/issues/33) tracks each limitation
