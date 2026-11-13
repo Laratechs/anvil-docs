@@ -29,8 +29,9 @@ takes is one of these requests.
   - `403`: the caller's [role](#roles) doesn't allow it. The message names
     the group whose members may;
   - `404`: no such service;
-  - `409`: the service's lifecycle doesn't allow it, or the name is an
-    unmanaged repository.
+  - `409`: the service's lifecycle doesn't allow it, the name is an
+    unmanaged repository, or `options` changes an immutable option
+    (the message names it and its stored value).
 
   Terraform failures are reported on the operation and on the service's
   `Ready` condition, not as an HTTP error.
@@ -91,6 +92,12 @@ gets a tenant.
   server gives each to the definition that declares it, and a deployment's
   option in a request without a deployment is a field error.
   `POST /v1/services/{name}/deployment` takes only the deployment's.
+  A value outside an option's `choices` in the catalog is a field error
+  on `options` that lists them.
+- An option the catalog marks `immutable` is stored with its effective
+  value, default included, when the service, its deployment or its
+  add-on is created, and shows in `spec` like any other. Asking for
+  another value, or `null`, is a `409`, on all three endpoints.
 - `spec.addons` holds the attached add-ons by name, with their options.
   `status.addons` holds the tenants the service may have (`name`, `instance`),
   and a tenant's stateful resources are listed under `stateful` with `addon`.
@@ -166,7 +173,9 @@ doesn't accept is a `409`.
 
 `GET /v1/catalog` lists each definition's components, a deployment's `type`
 (`platform-managed` or `self-managed`), the options of the service and of
-each deployment (`options`: each one's `name`, `type` and `default`) and, for a deployment that
+each deployment (`options`: each one's `name`, `type`, `default` and, when the catalog
+limits it, `choices`, the values it accepts, and `immutable: true` for
+one fixed once set) and, for a deployment that
 declares a `binding { }` block, its binding schema (`binding`: each
 attribute's `name`, `type` and `default`).
 

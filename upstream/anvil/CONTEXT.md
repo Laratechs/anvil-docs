@@ -41,7 +41,7 @@ A value the platform team (the operator) gives a catalog definition, saying how 
 _Avoid_: Config, option, binding
 
 **Option**:
-A choice a requester makes for one service, or for its deployment, declared by the catalog and stored on the service, such as whether a Cloud Run service is public. An option not chosen takes the catalog's default.
+A choice a requester makes for one service, or for its deployment, declared by the catalog and stored on the service, such as whether a Cloud Run service is public. An option not chosen takes the catalog's default, and an immutable option keeps the value the service was created with.
 _Avoid_: Setting, binding, flag, parameter
 
 **Requester**:

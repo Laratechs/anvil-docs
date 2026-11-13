@@ -209,6 +209,8 @@ deployment "gcp" {
 | `settings { }` | both | no | Operator values, as Terraform type constraints with `optional()` defaults. For the service, values every service shares; for a deployment, how it is deployed wherever it lands, such as the gcp `public` default. |
 | `binding { }` | deployment | no | The values a binding for this deployment carries: where it lands, such as the platform's project and region, or the folder new projects are created in. Same syntax as settings. An attribute may not be called `name`, which is the binding's own name. |
 | `options { }` | both | no | Requester choices for one service, or for one service's deployment, same syntax as settings. The service and a deployment can't declare an option of the same name. |
+| `choices` | both | no | The values an option accepts: an object from option name to a list of literal values, such as `{ template = ["go", "python"] }` (see [Options](#options)). |
+| `immutable` | both | no | The options fixed once a service has them: a list of literal option names, such as `["template"]` (see [Options](#options)). |
 | `enabled_when` | deployment | no | A boolean expression over `settings` only; false hides the deployment. |
 | `provider "<name>" { source, version, config }` | both | at least `source` | A Terraform provider: `source` and `version` (a version constraint) are literal strings; `config` is an object of expressions. A definition declares a provider once. A deployment can't declare one the service declares; two deployments may declare the same one (see below). |
 | `component "<name>" { module, inputs }` | both | at least one | A Terraform module: `module` is a literal string, `inputs` an object of expressions. Names are identifiers, unique per definition. |
@@ -221,7 +223,8 @@ Any other attribute or block is a load error, including `type`,
 without a `type`, a `cloud` block, `archive_targets` on a deployment, an
 unknown status key, and the old `keep_on_delete` (now
 `destroy_on_delete`). Literal-only fields (`type`, `title`, `source`,
-`version`, `module`, the lifecycle lists) are evaluated without variables.
+`version`, `module`, the lifecycle lists, `choices`, `immutable`) are
+evaluated without variables.
 
 **Providers shared by deployments.** A managed deployment and a cloud on
 the same provider both need its Terraform provider, configured
@@ -361,10 +364,57 @@ block takes no binding.
   `anvil service deploy` sets only the deployment's, and refuses one of
   the service's. An add-on's options are set on their own command, so
   their names are free.
+- `choices` lists the values an option accepts, so a bad one is refused
+  when it is requested instead of failing in Terraform:
+
+  ```hcl
+  options {
+    template = optional(string, "go")
+  }
+  choices = {
+    template = ["go", "python", "rust", "typescript"]
+  }
+  ```
+
+  A value outside them is a field error that lists them
+  (`template must be one of go, python, rust, typescript`); `null`, which
+  takes the default, is always accepted. These are load errors: a name
+  that isn't a declared option, an option whose type isn't `string`,
+  `number` or `bool`, a value that doesn't convert to the option's type,
+  an empty list, and a default that isn't one of the choices.
+- A stored value that a later catalog no longer lists fails the
+  service's next apply, naming the option, the value and the choices.
+  Anvil doesn't change or drop it: the requester sets an offered value,
+  or `null`, and the apply goes through.
 - Anvil stores only what the requester chose. Defaults are applied at
   every apply, so changing an option's default in the catalog changes
   existing services on their next apply. Catalog authors treat a default
-  change as a migration.
+  change as a migration, or make the option immutable.
+- `immutable` lists options that are fixed once a service has them, the
+  way a deployment's type is fixed, for a choice the service can't move
+  away from, such as the template its repository was created from:
+
+  ```hcl
+  options {
+    template = optional(string, "go")
+  }
+  immutable = ["template"]
+  ```
+
+  When the service, its deployment or its add-on is created, Anvil stores
+  each immutable option's effective value: the requester's choice, or the
+  catalog's default at that moment, so a later change of the default
+  never moves it. One with no default that isn't chosen stores nothing
+  and stays unset. Asking for the stored value again changes nothing;
+  asking for another, or `null`, is a `409` naming the option and its
+  value. A name that isn't a declared option is a load error.
+- A service from before an option was immutable stores nothing for it,
+  so its value is the catalog's default: Anvil refuses any other, and
+  records the default at the service's next apply, without a new
+  generation. There is no startup migration (see
+  [Known limitations](#known-limitations)).
+- If the catalog later removes a name from `immutable`, the stored value
+  stays and can be changed like any other option.
 - A stored option the catalog no longer declares, of the service or of
   its deployment, is dropped when
   rendering, with a warning in the apply log, on the operation, and in
@@ -378,7 +428,8 @@ block takes no binding.
 
 `GET /v1/catalog` (`anvil catalog show`) lists each definition's title,
 `type`, components, whether it can be requested and why not, each option's name,
-type and default, and each binding schema. It never shows settings
+type, default and choices and whether it is immutable, and each binding
+schema. It never shows settings
 values.
 
 ## Status
@@ -566,7 +617,9 @@ addon "postgres" {
 - **`deployments`** (required) names platform-managed deployments. A
   self-managed service, or one without a deployment, is refused the
   add-on. The add-on's name may not be a deployment's.
-- **`settings`** and **`options`** work as a deployment's. Settings are
+- **`settings`**, **`options`**, **`choices`** and **`immutable`** work as
+  a deployment's; an immutable option is recorded when the add-on is
+  attached. Settings are
   set in `settings "addon_<name>"` and reach both parts; options reach
   the tenant only.
 - **`instance`** holds `provider` and `component` blocks and `outputs`,
@@ -652,6 +705,11 @@ address, so existing services re-apply with no Terraform changes.
   revision it was created with until it has no tenants left.
 - **One add-on instance per binding.** Tenants of one add-on on one
   binding always share an instance; a catalog can't ask for more.
+- **Immutable options of existing services follow the default until
+  their next apply.** A service from before an option was immutable
+  stores nothing for it until its next apply records the catalog's
+  default. If the default changes first, the service records the new
+  one.
 
 Contract 2 knowingly couples Anvil to GitHub and to its server environment.
 [#33](https://github.com/Laratechs/anvil/issues/33) tracks each limitation

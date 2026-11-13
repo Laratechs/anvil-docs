@@ -11,6 +11,8 @@ listed under **Breaking changes**.
 
 ## Unreleased
 
+## v0.2.0 (2026-11-13)
+
 ### Breaking changes
 
 - **`-option` on `anvil service create` no longer asks for a deployment.**
@@ -60,6 +62,30 @@ listed under **Breaking changes**.
   ([Options](docs/catalog-contract.md#options)) (#49).
 
 ### Added
+
+- **`anvil catalog render -option name=value`** renders a service as a
+  requester's choices make it: options of the service or of the `-cloud`
+  deployments, routed by name and checked as the server checks them.
+  `deployment.name=value` names the deployment where two rendered ones
+  declare the same option. A catalog can now test its options (#48).
+
+- **Immutable options.** A catalog may list options that are fixed once
+  a service has them with `immutable = [...]` beside `options { }`, on
+  the service, a deployment or an add-on. Anvil stores an immutable
+  option's effective value, default included, when the service,
+  deployment or add-on is created, so a later default never moves it,
+  and answers `409` to another value. A service from before the option
+  has the default, which Anvil records at its next apply.
+  `GET /v1/catalog` marks them `immutable`, and `anvil catalog show`
+  says `fixed once set` (#60).
+
+- **Option choices.** A catalog may list the values an option accepts
+  with `choices = { name = [...] }` beside `options { }`, on the service,
+  a deployment or an add-on. A value outside them is refused when it is
+  requested, with the list, instead of failing in Terraform; a stored
+  value a later catalog no longer lists fails the next apply, naming it.
+  `GET /v1/catalog` and `anvil catalog show` list each option's choices.
+  Additive under contract 3 (#59).
 
 - **Service options: the service definition may declare `options { }`.**
   A catalog can now let a requester choose something for the service

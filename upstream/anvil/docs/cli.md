@@ -103,7 +103,11 @@ anvil service deploy -option public=false orders     # require authentication on
 
 `-option` sets a choice the catalog offers for the deployment, and
 `anvil catalog show` lists them. Options not chosen take the catalog's
-default, and `name=null` returns one to it. When the catalog stops
+default, and `name=null` returns one to it. An option may accept only
+some values, which `anvil catalog show` lists after `one of`; any other is
+refused with the list. An option shown as `fixed once set` keeps the
+value a service was created with, the default if it chose none, and
+asking for another is refused. When the catalog stops
 offering an option a service has set, the service's warnings say so until
 `-option name=null` clears it. A catalog can also offer options for the
 service itself. Those are set with the same flag on `anvil service create`,
@@ -170,7 +174,11 @@ To see what a catalog would build without a server, render it:
 
 ```
 anvil catalog render -cloud=gcp -bindings b.json orders ./out
+anvil catalog render -cloud=gcp -bindings b.json -option template=python orders ./out   # as a requester's choice renders
 ```
+
+`-option` takes the options a requester could choose, for the service or
+the deployments in `-cloud`, and checks them as the server does.
 
 Setting these up is covered in [Running the server](server.md).
 

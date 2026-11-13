@@ -67,7 +67,8 @@ skipped when Terraform isn't installed.
 A catalog tests what its definitions build. The Laratechs catalog,
 [Laratechs/anvil-catalog](https://github.com/Laratechs/anvil-catalog),
 does it with `tests/run.sh`: for each case, `anvil catalog render`
-generates a service's root module, and `terraform validate` and
+generates a service's root module, with the settings, bindings and
+requester options (`-option`) the case names, and `terraform validate` and
 `terraform test` run on it with mock providers. That needs no
 credentials and creates nothing, but downloads the real providers.
 
