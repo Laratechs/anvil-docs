@@ -86,7 +86,7 @@ Scenarios run against one of two catalogs:
 
 - **The engine catalog**, [`testdata/catalog`](testdata/catalog), for scenarios
   that test Anvil itself (bindings, migrations, catalog loading, options, force
-  delete) whatever catalog is deployed. Its service, its `e2eslot` and
+  delete) whatever catalog is deployed. Its service (whose `flavor` option shows as the tag of `status.image`), its `e2eslot` and
   `e2eplatform` deployments and its `e2edb` add-on are each one
   `terraform_data`, so they download nothing and create nothing on GitHub or in
   a cloud account. Its servers ignore `ANVIL_SETTINGS` and `ANVIL_CONFIG`, which
@@ -103,6 +103,7 @@ with `ANVIL_E2E_URL`.
 | `TestServiceLifecycle` | Under test | The whole life of a service: create, a repeated request that changes nothing, archive, restore, and force delete. Checks the repository, its topic and CI file, no team access, and that status lives only under `status`. A developer's force delete is refused, naming the admin group |
 | `TestForceDeleteAfterFailedCreate` | Engine, own server | A create that fails before Terraform writes any state leaves the service `failed`, and force delete still removes the record. Also proves an HCL configuration file's settings reach Terraform, and that an undeclared attribute stops the server naming the file, line and attribute |
 | `TestServiceDeploy` | Engine, own server | A deployment's type is fixed: `service deploy` defaults to platform-managed, then refuses another type or a second deployment. A self-managed service can't be archived, and its force delete names and warns about its own cloud |
+| `TestServiceOptions` | Engine, own server | Service options: `service create -option` sets an option of the service with no deployment and the value reaches Terraform, one request sets the service's and the deployment's, a deployment's option without a deployment and `service deploy` with a service option are refused, and `null` returns to the default. `catalog show` lists the service's options |
 | `TestAddon` | Engine, own server | Add-ons: services share one instance and each gets a tenant. Archive is refused, detach keeps the instance for the others, and force deleting the last tenant removes the instance |
 | `TestBindings` | Under test | An operator manages a binding through the CLI: schema validation, revisions, a repeated create storing nothing, update, list and delete |
 | `TestCloudBinding` | Engine, own server | Bindings on deployments: a deployment records its binding's revision, a binding update re-applies nothing, `service migrate` moves one service on confirmation, and a binding in use can't be deleted |
@@ -113,7 +114,7 @@ with `ANVIL_E2E_URL`.
 | `TestCatalogRenamedAttribute` | Engine, own server | A catalog still using a renamed attribute (`keep_on_delete`) stops the server, naming the file, the old attribute and the new one |
 | `TestCatalogRequired` | Own server | Anvil builds no catalog in: with none configured, or `builtin`, the server refuses to start and says what to set |
 | `TestRemovedVariables` | Engine, own server | A removed MVP variable stops the server and names its replacement |
-| `TestDroppedOption` | Engine, own server | An option the catalog no longer declares is dropped with a warning in the status, and the service still applies |
+| `TestDroppedOption` | Engine, own server | An option the catalog no longer declares is dropped with a warning in the status, and the service still applies. `-option name=null` clears it, and the warning with it; null for a name never stored is refused |
 | `TestSignIn` | Under test | Signing in and roles: a command before `anvil login` says to sign in, login stores credentials only the user can read, `whoami` shows who the server takes the caller to be and their role, a GitHub token or no token is answered `401`, a viewer can list but not create, a developer can't write bindings, and `logout` signs out and revokes the sign-in at the identity provider. Skips with `ANVIL_E2E_URL` |
 | `TestUpgrade` | Under test, own servers | Upgrades converge: a service made by the baseline release is repeated against this checkout's server and applies with nothing to add, change, destroy or import, keeping every status value |
 

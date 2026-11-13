@@ -151,9 +151,9 @@ values.
 
 ### Options
 
-Options are what one service's requester chooses for its deployment, such as
-whether its Cloud Run service is public. The definition's `options` block
-declares them. They are stored on the service and listed by
+Options are what one service's requester chooses for the service or for its
+deployment, such as whether its Cloud Run service is public. The definition's
+`options` block declares them. They are stored on the service and listed by
 `anvil catalog show`. An option not chosen takes its declared default, or
 `null`, which a definition can map to a setting.
 

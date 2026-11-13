@@ -103,7 +103,13 @@ anvil service deploy -option public=false orders     # require authentication on
 
 `-option` sets a choice the catalog offers for the deployment, and
 `anvil catalog show` lists them. Options not chosen take the catalog's
-default. For Cloud Run, see
+default, and `name=null` returns one to it. When the catalog stops
+offering an option a service has set, the service's warnings say so until
+`-option name=null` clears it. A catalog can also offer options for the
+service itself. Those are set with the same flag on `anvil service create`,
+with or without a deployment
+(`anvil service create -option template=python orders`), and Anvil gives
+each option to whichever declares it. For Cloud Run, see
 [Running services on Cloud Run](gcp.md).
 
 ## Add a database

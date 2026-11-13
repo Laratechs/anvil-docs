@@ -208,7 +208,7 @@ deployment "gcp" {
 | `title` | both | no | Human name, such as "Cloud Run service". Defaults to the definition's name (`service`, `deployment "gcp"`). Anvil names the deployment by it in the API and CLI. |
 | `settings { }` | both | no | Operator values, as Terraform type constraints with `optional()` defaults. For the service, values every service shares; for a deployment, how it is deployed wherever it lands, such as the gcp `public` default. |
 | `binding { }` | deployment | no | The values a binding for this deployment carries: where it lands, such as the platform's project and region, or the folder new projects are created in. Same syntax as settings. An attribute may not be called `name`, which is the binding's own name. |
-| `options { }` | deployment | no | Requester choices for one service's deployment, same syntax as settings. |
+| `options { }` | both | no | Requester choices for one service, or for one service's deployment, same syntax as settings. The service and a deployment can't declare an option of the same name. |
 | `enabled_when` | deployment | no | A boolean expression over `settings` only; false hides the deployment. |
 | `provider "<name>" { source, version, config }` | both | at least `source` | A Terraform provider: `source` and `version` (a version constraint) are literal strings; `config` is an object of expressions. A definition declares a provider once. A deployment can't declare one the service declares; two deployments may declare the same one (see below). |
 | `component "<name>" { module, inputs }` | both | at least one | A Terraform module: `module` is a literal string, `inputs` an object of expressions. Names are identifiers, unique per definition. |
@@ -216,7 +216,7 @@ deployment "gcp" {
 | `status { }` | both | no | Values for the status keys Anvil declares (see [Status](#status)). |
 | `lifecycle { archive_targets, destroy_on_delete, stateful }` | see [Exports, archive and delete](#exports-archive-and-delete) | no | Lists of definition-relative addresses. `archive_targets` is for the service only. |
 
-Any other attribute or block is a load error, including `type`, `options`,
+Any other attribute or block is a load error, including `type`,
 `binding`, `enabled_when` or `exports` on the service, a deployment
 without a `type`, a `cloud` block, `archive_targets` on a deployment, an
 unknown status key, and the old `keep_on_delete` (now
@@ -245,7 +245,7 @@ is a load error.
 | `settings.<x>` | both | This definition's settings, defaults applied | `var.settings.<key>.<x>` |
 | `binding.name` | deployment with a `binding { }` block | The name of the binding this deployment uses | `var.binding.<key>.name` |
 | `binding.<x>` | deployment with a `binding { }` block | A value of the binding revision this deployment uses, defaults applied; `<x>` must be declared in the block | `var.binding.<key>.<x>` |
-| `options.<x>` | deployment | This deployment's options, defaults applied; an unset option without a default is `null` | `var.options.<key>.<x>` |
+| `options.<x>` | both | This definition's options, defaults applied; an unset option without a default is `null` | `var.options.<key>.<x>` |
 | `component.<c>.<output>` | both | An output of a component in the same definition | `module.<key>_<c>.<output>` |
 | `children.deployment` | service | A list with one `{ name, type, binding, exports }` per deployment the service has; `binding` is `{ name, revision }`, or `null` for a deployment whose definition has no `binding { }` block | `local.children_cloud` |
 
@@ -273,7 +273,7 @@ it.
 | --- | --- | --- | --- | --- |
 | Setting | `settings { }` in any definition | Operator | How every service, or every cloud of a provider, is deployed | Server configuration, `settings "<key>" { }` or the `ANVIL_SETTINGS` JSON file |
 | Binding | `binding { }` in a deployment definition | Operator | Where its deployments land | A cloud binding resource in Anvil, for the provider named after the deployment |
-| Option | `options { }` in a deployment definition | Requester | What one service's deployment chooses | Stored on the service |
+| Option | `options { }` in any definition | Requester | What one service, or its deployment, chooses | Stored on the service |
 
 ### Settings
 
@@ -352,13 +352,29 @@ block takes no binding.
   `anvil service create` and `anvil service deploy`, or `options` in
   the API request. An unknown name or a value of the wrong type is
   rejected with a field error listing the valid names.
+- The service's options and its deployment's are set with the same flag
+  and field, and Anvil gives each to the definition that declares it. So
+  a name belongs to one of them: a catalog whose service and one of its
+  deployments both declare an option fails to load, naming both.
+  `anvil service create` sets the service's options, with or without a
+  deployment, and the deployment's when it asks for one.
+  `anvil service deploy` sets only the deployment's, and refuses one of
+  the service's. An add-on's options are set on their own command, so
+  their names are free.
 - Anvil stores only what the requester chose. Defaults are applied at
   every apply, so changing an option's default in the catalog changes
   existing services on their next apply. Catalog authors treat a default
   change as a migration.
-- A stored option the catalog no longer declares is dropped when
+- A stored option the catalog no longer declares, of the service or of
+  its deployment, is dropped when
   rendering, with a warning in the apply log, on the operation, and in
   the service's `status.warnings`, until an apply no longer finds it.
+  The warning gives the command that clears it:
+  `anvil service deploy -option name=null NAME` unsets a stored option
+  the catalog no longer declares, and `anvil service create` does the
+  same for one of the service's. Any other value for it, and `null` for
+  a name that is neither declared nor stored, is rejected like any
+  unknown name.
 
 `GET /v1/catalog` (`anvil catalog show`) lists each definition's title,
 `type`, components, whether it can be requested and why not, each option's name,
@@ -650,6 +666,3 @@ and possible solutions.
   environment, not from bindings, so one Anvil server holds one identity
   per provider. Bindings that need different identities, such as two GCP
   organizations, are not supported.
-- **Undeclared options.** A stored option the catalog no longer declares
-  can't be removed through the API yet: the option check rejects unknown
-  names, `null` included.

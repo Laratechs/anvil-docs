@@ -13,6 +13,12 @@ listed under **Breaking changes**.
 
 ### Breaking changes
 
+- **`-option` on `anvil service create` no longer asks for a deployment.**
+  An option may now belong to the service, so `-option` alone creates a
+  service with nowhere to run, and a deployment's option without `-deploy`
+  (or `-type`, `-deployment`, `-binding`) is refused, naming the
+  deployment. Add `-deploy` (#58).
+
 - **Roles from the identity provider's groups: viewer, developer, admin.**
   Until now anyone who could reach Anvil could do everything. Now everyone
   signed in may read; members of `anvil-developers` may create and change
@@ -41,7 +47,30 @@ listed under **Breaking changes**.
   GitHub organization is gone: what a caller may do is their role (above). New: `GET /v1/whoami`, which
   `anvil whoami` now shows (#54).
 
+### Fixed
+
+- **An option the catalog no longer declares can be cleared.** A service
+  that stored an option its catalog later dropped warned about it on every
+  apply, and nothing could remove it: `-option name=null` was refused as an
+  unknown name. Now `anvil service deploy -option name=null NAME` (`null`
+  in the API's `options`) unsets a stored option the catalog no longer
+  declares, the next apply clears the warning, and the warning gives the
+  command. A value for such an option, and `null` for a name that is
+  neither declared nor stored, are still rejected with the valid names
+  ([Options](docs/catalog-contract.md#options)) (#49).
+
 ### Added
+
+- **Service options: the service definition may declare `options { }`.**
+  A catalog can now let a requester choose something for the service
+  itself, not only for its deployment, and read it as `options.<x>` in the
+  service definition. Requesters set both kinds with `-option` on
+  `anvil service create` (`options` in the API), and Anvil gives each to
+  the definition that declares it; `anvil service deploy` sets only the
+  deployment's. The service's are stored in `spec.options` and listed by
+  `anvil catalog show`. A catalog whose service and one of its deployments
+  declare an option of the same name fails to load
+  ([Options](docs/catalog-contract.md#options)) (#58).
 
 - **The CLI looks after stored credentials.** Commands running at once take
   turns refreshing an expired token, so the identity provider's refresh

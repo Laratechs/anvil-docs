@@ -85,6 +85,12 @@ gets a tenant.
 | `DELETE /v1/services/{name}/addons/{addon}?confirm={name}` | | `200` if unchanged (including an add-on the service doesn't have), `202` operation queued |
 | `GET /v1/addons` | | `200` `{"addons": [...]}`: each add-on's `name`, `title`, `deployments` and `instances` |
 
+- `spec.options` holds the options chosen for the service itself, and
+  `spec.cloud_options` those chosen for its deployment, by the
+  deployment's name. `options` in `POST /v1/services` carries both: the
+  server gives each to the definition that declares it, and a deployment's
+  option in a request without a deployment is a field error.
+  `POST /v1/services/{name}/deployment` takes only the deployment's.
 - `spec.addons` holds the attached add-ons by name, with their options.
   `status.addons` holds the tenants the service may have (`name`, `instance`),
   and a tenant's stateful resources are listed under `stateful` with `addon`.
@@ -159,7 +165,8 @@ doesn't accept is a `409`.
 ## Catalog
 
 `GET /v1/catalog` lists each definition's components, a deployment's `type`
-(`platform-managed` or `self-managed`), its options and, for a deployment that
+(`platform-managed` or `self-managed`), the options of the service and of
+each deployment (`options`: each one's `name`, `type` and `default`) and, for a deployment that
 declares a `binding { }` block, its binding schema (`binding`: each
 attribute's `name`, `type` and `default`).
 
