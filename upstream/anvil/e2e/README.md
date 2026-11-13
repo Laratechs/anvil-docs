@@ -100,6 +100,7 @@ with `ANVIL_E2E_URL`.
 
 | Scenario | Catalog | What it protects |
 | --- | --- | --- |
+| `TestServiceTemplate` | Under test | `service create -option template=python` creates the repository from the Python template, with kept-in-sync files the same as the template's, and `template=go` on the same service is refused naming python. Skips on a catalog without the template option |
 | `TestServiceLifecycle` | Under test | The whole life of a service: create, a repeated request that changes nothing, archive, restore, and force delete. Checks the repository, its topic and CI file, no team access, and that status lives only under `status`. A developer's force delete is refused, naming the admin group |
 | `TestForceDeleteAfterFailedCreate` | Engine, own server | A create that fails before Terraform writes any state leaves the service `failed`, and force delete still removes the record. Also proves an HCL configuration file's settings reach Terraform, and that an undeclared attribute stops the server naming the file, line and attribute |
 | `TestServiceDeploy` | Engine, own server | A deployment's type is fixed: `service deploy` defaults to platform-managed, then refuses another type or a second deployment. A self-managed service can't be archived, and its force delete names and warns about its own cloud |

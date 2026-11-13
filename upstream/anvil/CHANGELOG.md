@@ -11,6 +11,17 @@ listed under **Breaking changes**.
 
 ## Unreleased
 
+### Breaking changes
+
+- **The Laratechs catalog's template setting is now a requester option.**
+  The docs, `catalog.Example` and CI move to anvil-catalog `v0.5.0`, whose
+  service offers `-option template=go|python|rust|typescript` on
+  `anvil service create`, fixed once a service has it. It needs this
+  release or later. Moving a server to it: remove `template` from
+  `settings "service" { }` first, or the server stops at start naming it.
+  Existing services, all from the Go template, record `go` at their next
+  apply and change nothing (#61).
+
 ## v0.2.0 (2026-11-13)
 
 ### Breaking changes

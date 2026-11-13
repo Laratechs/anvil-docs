@@ -43,7 +43,7 @@ github {
 }
 
 catalog {
-  source = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0"
+  source = "git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.5.0"
 }
 
 terraform {
@@ -118,8 +118,8 @@ the file and line).
 
 ```hcl
 settings "service" {
-  registry = "ghcr.io/laratechs"
-  template = "Laratechs/anvil-template-go"
+  registry     = "ghcr.io/laratechs"
+  template_ref = "main"
 }
 
 settings "cloud_gcp" {
@@ -175,7 +175,7 @@ deployment, such as whether its Cloud Run service is public. The definition's
 | `auth.audience` | `ANVIL_OIDC_AUDIENCE` | | `api://anvil` | Audience of the access tokens the issuer mints for Anvil |
 | `auth.developer_group` | `ANVIL_AUTH_DEVELOPER_GROUP` | | `anvil-developers` | The issuer's group whose members may create and change services ([roles](api.md#roles)) |
 | `auth.admin_group` | `ANVIL_AUTH_ADMIN_GROUP` | | `anvil-admins` | The issuer's group whose members may also manage bindings, migrate services and permanently delete them |
-| `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0` |
+| `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.5.0` |
 | `catalog.allow_branch` | `ANVIL_CATALOG_ALLOW_BRANCH` | | `false` | Let the catalog source name a branch (development only) |
 | `terraform.binary` | `ANVIL_TERRAFORM_BIN` | | `terraform` | Terraform executable |
 | `terraform.state.bucket` | `ANVIL_TF_STATE_BUCKET` | | | GCS bucket for state. Unset keeps state on local disk (development only). |

@@ -45,9 +45,11 @@ modules a service and each deployment are built from, the settings they need,
 and what they report back. Every server pins its catalog with `catalog.source`
 in its configuration file. The Laratechs catalog is
 [Laratechs/anvil-catalog](https://github.com/Laratechs/anvil-catalog), and new
-repositories come from the GitHub template repository it names
+repositories come from the GitHub template repository the requester
+chooses from those it offers
 ([Laratechs/anvil-template-go](https://github.com/Laratechs/anvil-template-go)
-by default). The [catalog contract](docs/catalog-contract.md) is the
+by default; `anvil service create -option template=python NAME` for
+another). The [catalog contract](docs/catalog-contract.md) is the
 agreement between the two: what a catalog may declare and rely on.
 
 ## Where to start

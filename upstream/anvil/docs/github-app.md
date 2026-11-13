@@ -106,8 +106,9 @@ On the App's page, open **Install App**, choose the organization, and pick
 **All repositories**.
 
 Choose **All repositories**, not a selection. Anvil creates new repositories
-all the time, and it also needs to read the template repository
-(`Laratechs/anvil-template-go` by default), a private `git::` catalog, and
+all the time, and it also needs to read the template repositories the
+catalog offers (`Laratechs/anvil-template-go` and the others), a private
+`git::` catalog, and
 repositories created before the App existed.
 
 Anvil finds the installation on the organization (`github.organization`)
