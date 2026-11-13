@@ -18,8 +18,24 @@ Anvil is before 1.0, so some of these will change; the
 - **Request interface:** the CLI and the HTTP API. A portal or a GitHub issue
   form can sit on top of the API later.
 - **Ownership:** services have no owning team; they belong to the
-  organization. Any active member of the GitHub organization may create,
-  change, archive or restore any service.
+  organization. Any developer may create, change, archive or restore any
+  service.
+- **Roles:** viewer, developer and admin, organization-wide, from two groups
+  at the identity provider. Anvil declares what each may do; the catalog
+  doesn't. Everyone signed in may read. Admins, meant to be the platform
+  team, are the only ones who manage bindings, migrate services and
+  permanently delete them. There are no per-service or per-team
+  permissions. A change of groups takes effect at the next token, within the
+  access token's lifetime.
+- **Identity:** engineers sign in with the organization's identity provider
+  (Okta), and Anvil accepts only access tokens minted for it. It never
+  receives a credential that works anywhere else, such as a GitHub token,
+  holds no sign-in secret and keeps no sessions. A token works until it
+  expires (an hour by default), so removing someone's access takes effect
+  then. Only people sign in: there are no machine callers yet. The CLI keeps
+  its credentials in a file only the user can read, not in the operating
+  system's keychain, and the access token is a bearer token: a copy works
+  until it expires.
 - **Naming:** 3–25 characters, lowercase letters, digits and single hyphens,
   starting with a letter. A few generic names are reserved.
 - **CI and registry:** GitHub Actions, with one shared registry

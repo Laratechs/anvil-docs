@@ -5,9 +5,11 @@ takes is one of these requests.
 
 ## Conventions
 
-- **Authentication.** All `/v1` routes take
-  `Authorization: Bearer <your GitHub token>`. Every response carries an
-  `Anvil-Version` header.
+- **Authentication.** All `/v1` routes except `/v1/auth/config` take
+  `Authorization: Bearer <access token>`: the token `anvil login` obtains
+  from the organization's identity provider ([Sign-in](#sign-in)). Anvil
+  accepts only tokens minted for it; it doesn't take GitHub tokens. Every
+  response carries an `Anvil-Version` header.
 - **Desired state.** A write describes the state you want, so repeating it is
   safe. It answers `200` when nothing changes, or `202` with a queued
   operation when Terraform has work to do ([How Anvil works](how-it-works.md#idempotency)).
@@ -21,8 +23,11 @@ takes is one of these requests.
   finishes and returns `201` (`200` for a delete), or `502` with the failure.
 - **Errors.** `{"error", "fields"?, "service"?}` with status:
   - `400`: invalid, with per-field messages in `fields`;
-  - `401`: no valid GitHub token;
-  - `403`: not an organization member;
+  - `401`: no access token, or one Anvil doesn't accept (expired, or not
+    issued for Anvil), with a `WWW-Authenticate: Bearer` header. The reason
+    is in the server's log, not the response;
+  - `403`: the caller's [role](#roles) doesn't allow it. The message names
+    the group whose members may;
   - `404`: no such service;
   - `409`: the service's lifecycle doesn't allow it, or the name is an
     unmanaged repository.
@@ -129,8 +134,8 @@ A **cloud binding** says where one provider's deployments land.
   one, and an identical write stores nothing.
 - Binding writes need no Terraform, so they answer at once, without an
   operation.
-- Values are configuration, not secrets. Any organization member can manage
-  bindings until Anvil has an operator role.
+- Values are configuration, not secrets. Anyone signed in can read them;
+  writing and deleting bindings takes the admin [role](#roles).
 
 A deployment whose definition declares a `binding { }` block records the
 binding revision it is created with. `binding` in a deployment request names
@@ -170,9 +175,36 @@ deployment without a binding block takes no binding.
 `GET /v1/auth/config` takes no token and answers `200` with
 `{"issuer","client_id","audience","scopes"}`: the issuer the server trusts
 and the CLI's client there, which is what `anvil login` needs in order to
-sign in ([Setting up sign-in with Okta](okta.md)). A server not configured
-for sign-in answers `404`. The other routes don't accept the issuer's tokens
-yet.
+sign in ([Setting up sign-in with Okta](okta.md)).
+
+`GET /v1/whoami` answers `200` with `{"subject","groups","role"}`: who the
+server takes the caller to be, from the access token, and the role their
+groups give them. The subject is what Anvil records as the requester of a
+change.
+
+The server checks each access token's signature against the issuer's
+published keys, and that it was issued by that issuer, for Anvil's audience,
+to the CLI's client, and hasn't expired. It keeps no sessions: a token works
+until it expires.
+
+## Roles
+
+What a caller may do comes from the `groups` claim of their access token.
+Roles are organization-wide, and each includes the ones above it:
+
+| Role | Who | May |
+| --- | --- | --- |
+| viewer | anyone signed in | read services, operations, bindings, add-ons and the catalog |
+| developer | members of the developer group (`anvil-developers`) | also create, deploy, archive and restore services, and add or remove their add-ons |
+| admin | members of the admin group (`anvil-admins`) | also create, update and delete bindings, migrate services onto a binding's current values, and permanently delete services |
+
+In routes: every `GET` takes a viewer. `POST /v1/services`,
+`POST /v1/services/{name}/deployment`, the add-on routes and
+`DELETE /v1/services/{name}` take a developer. `DELETE /v1/services/{name}`
+with `force=true`, `POST /v1/services/{name}/migrate` and the binding writes
+take an admin. The role is checked before the request is looked at, so a
+caller without it gets `403` whatever they sent. The group names are the
+server's `auth.developer_group` and `auth.admin_group`.
 
 ## Health
 

@@ -44,6 +44,14 @@ _Avoid_: Config, option, binding
 A choice a requester makes for one service's deployment, declared by the catalog and stored on the service, such as whether a Cloud Run service is public. An option not chosen takes the catalog's default.
 _Avoid_: Setting, binding, flag, parameter
 
+**Requester**:
+The person who asked Anvil for a change, recorded on the operation: their login at the identity provider they signed in with.
+_Avoid_: Owner, user, GitHub login
+
+**Role**:
+What a requester may do, from their groups at the identity provider. Roles are organization-wide, as services have no owner. A **viewer** (anyone signed in) may read; a **developer** may also create and change services; an **admin** may also manage cloud bindings, migrate services and permanently delete them.
+_Avoid_: Permission, team, owner, operator role
+
 ## Names from before deployments
 
 Until November 2026 every deployment was called a cloud. Some names keep the old word so that stored records and Terraform state didn't have to move: `spec.clouds` and `status.clouds` in service records and API bodies, the `cloud_<name>` key in generated Terraform and in `settings "<key>"` blocks, a binding's `provider` (the deployment's name), and Go identifiers such as `CloudProvider`. Read them as "deployment".

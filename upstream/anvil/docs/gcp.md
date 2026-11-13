@@ -26,7 +26,8 @@ template's `deploy` job uses: `ANVIL_GCP_PROJECT`, `ANVIL_GCP_REGION`,
 `ANVIL_GCP_WORKLOAD_IDENTITY_PROVIDER`. Then it commits
 `.github/anvil-ci.env`, a copy of those variables, which starts CI: the
 run builds the repository's code and deploys it. The CLI follows that run
-on GitHub (with your GitHub token) and ends with the URL:
+on GitHub (with your own GitHub token, from `gh auth token`, which never goes
+to Anvil) and ends with the URL:
 
 ```
 $ anvil service create -deploy orders

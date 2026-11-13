@@ -8,13 +8,14 @@ archiving and deleting do.
 
 ```
 anvil service create -deploy orders
-        │  (your GitHub token, from `gh auth token`)
+        │  (the access token "anvil login" stored)
         ▼
 anvil server  POST /v1/services
-  1. Authenticate: whose token is it                → 401
-  2. Validate the name and the deployment asked for → 400 with what to change
-  3. Authorize: you are an active member of the
-     organization                                   → 403
+  1. Authenticate: the token is the identity
+     provider's, minted for Anvil, and not expired  → 401
+  2. Authorize: your role, from your groups at the
+     identity provider, allows the action           → 403
+  3. Validate the name and the deployment asked for → 400 with what to change
   4. Admit: the name isn't an unmanaged
      repository; the lifecycle allows it            → 404 / 409
   5. Merge the request into the service's spec

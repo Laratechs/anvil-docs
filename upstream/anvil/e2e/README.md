@@ -28,7 +28,16 @@ ANVIL_E2E=1 go test ./e2e/ -v -run 'ServiceLifecycle/create'   # one scenario or
   and `delete:packages`:
   `gh auth refresh -s delete_repo,read:packages,delete:packages`.
 
-The server reads the same environment as in production, so `ANVIL_CONFIG` (an
+The harness runs a fake identity provider, which its servers trust and its
+CLI signs in to with the real `anvil login`; the CLI's credentials live in
+the run's directory, not yours. It overrides `ANVIL_OIDC_*` and
+`ANVIL_CONFIG_DIR` for this. A server named by `ANVIL_E2E_URL` has a real
+identity provider instead: run `anvil login` against it first, as an admin.
+
+The harness's CLI is signed in as an admin. A scenario about what a role may
+do gets a CLI signed in as someone else from `h.as(t, authtest.User{...})`.
+
+Otherwise the server reads the same environment as in production, so `ANVIL_CONFIG` (an
 HCL configuration file, as `anvil server -config`) and any `ANVIL_*` variable
 test those configurations.
 
@@ -46,7 +55,7 @@ A server named by `ANVIL_E2E_URL` needs its own gcp binding.
 | `ANVIL_E2E_BASELINE_CATALOG` | Catalog the `TestUpgrade` baseline runs, when it has no built-in catalog (default `ANVIL_E2E_CATALOG`). Set it to the catalog the baseline was released with when the catalog under test needs a contract the baseline doesn't read, such as a contract 3 catalog after a contract 2 baseline |
 | `ANVIL_E2E_BASELINE` | Ref `TestUpgrade` upgrades from (default the latest `v*` tag, else where `HEAD` branched from `main`, or `HEAD~1` on `main`) |
 | `ANVIL_GITHUB_ORG` | Organization to check repositories in (default `Laratechs`) |
-| `ANVIL_TOKEN` | Your GitHub token, for the CLI and the harness's GitHub checks (default `gh auth token`) |
+| `GH_TOKEN`, `GITHUB_TOKEN` | Your GitHub token, for the harness's GitHub checks and for the CLI to follow CI (default `gh auth token`) |
 
 **When a run fails**, it keeps its directory (printed at the end) with
 `server.log` and the server's data, including each service's Terraform logs.
@@ -91,7 +100,7 @@ with `ANVIL_E2E_URL`.
 
 | Scenario | Catalog | What it protects |
 | --- | --- | --- |
-| `TestServiceLifecycle` | Under test | The whole life of a service: create, a repeated request that changes nothing, archive, restore, and force delete. Checks the repository, its topic and CI file, no team access, and that status lives only under `status` |
+| `TestServiceLifecycle` | Under test | The whole life of a service: create, a repeated request that changes nothing, archive, restore, and force delete. Checks the repository, its topic and CI file, no team access, and that status lives only under `status`. A developer's force delete is refused, naming the admin group |
 | `TestForceDeleteAfterFailedCreate` | Engine, own server | A create that fails before Terraform writes any state leaves the service `failed`, and force delete still removes the record. Also proves an HCL configuration file's settings reach Terraform, and that an undeclared attribute stops the server naming the file, line and attribute |
 | `TestServiceDeploy` | Engine, own server | A deployment's type is fixed: `service deploy` defaults to platform-managed, then refuses another type or a second deployment. A self-managed service can't be archived, and its force delete names and warns about its own cloud |
 | `TestAddon` | Engine, own server | Add-ons: services share one instance and each gets a tenant. Archive is refused, detach keeps the instance for the others, and force deleting the last tenant removes the instance |
@@ -105,6 +114,7 @@ with `ANVIL_E2E_URL`.
 | `TestCatalogRequired` | Own server | Anvil builds no catalog in: with none configured, or `builtin`, the server refuses to start and says what to set |
 | `TestRemovedVariables` | Engine, own server | A removed MVP variable stops the server and names its replacement |
 | `TestDroppedOption` | Engine, own server | An option the catalog no longer declares is dropped with a warning in the status, and the service still applies |
+| `TestSignIn` | Under test | Signing in and roles: a command before `anvil login` says to sign in, login stores credentials only the user can read, `whoami` shows who the server takes the caller to be and their role, a GitHub token or no token is answered `401`, a viewer can list but not create, a developer can't write bindings, and `logout` signs out and revokes the sign-in at the identity provider. Skips with `ANVIL_E2E_URL` |
 | `TestUpgrade` | Under test, own servers | Upgrades converge: a service made by the baseline release is repeated against this checkout's server and applies with nothing to add, change, destroy or import, keeping every status value |
 
 `TestUpgrade` can't see rendering changes made in Go that leave the catalog's

@@ -1,16 +1,22 @@
 # Running the server
 
 `anvil server` runs the API and a pool of workers. It needs **Terraform 1.6+**
-and **git** on its `PATH`, and a **catalog**. Everything else has a default.
+and **git** on its `PATH`, a **catalog**, and an **identity provider** that
+engineers sign in to ([Setting up sign-in with Okta](okta.md)). Everything
+else has a default.
 
 ## Try it locally
 
-In a checkout, with the GitHub CLI signed in and
+In a checkout, with the GitHub CLI signed in,
 [Laratechs/anvil-catalog](https://github.com/Laratechs/anvil-catalog) cloned
-beside it:
+beside it, and an Okta authorization server (the free Integrator plan is
+enough):
 
 ```
+export ANVIL_OIDC_ISSUER=https://<your-okta-domain>/oauth2/<id>
+export ANVIL_OIDC_CLIENT_ID=<the CLI application's client ID>
 ANVIL_CATALOG=../anvil-catalog go run ./cmd/anvil server
+anvil login
 ```
 
 A dev server acts as your `gh auth token` and keeps records and Terraform state
@@ -162,9 +168,11 @@ declares them. They are stored on the service and listed by
 | `github.app.private_key_file` | `ANVIL_GITHUB_APP_PRIVATE_KEY_FILE` | | | Path to the App's private key (`.pem`) |
 | `github.app.installation_id` | `ANVIL_GITHUB_APP_INSTALLATION_ID` | | the App's installation on the organization | Pins the installation |
 | *(environment only)* | `ANVIL_GITHUB_TOKEN` | | `$GITHUB_TOKEN`, else `gh auth token` | Without an App, a token Anvil acts as instead (development). Not allowed together with an App |
-| `auth.issuer` | `ANVIL_OIDC_ISSUER` | | | Issuer URI of the Okta authorization server engineers sign in to ([Setting up sign-in with Okta](okta.md)). Not its metadata URL. Needs `auth.client_id` |
-| `auth.client_id` | `ANVIL_OIDC_CLIENT_ID` | | | Client ID of the CLI's native application at the issuer. Not a secret |
+| `auth.issuer` | `ANVIL_OIDC_ISSUER` | | *(required)* | Issuer URI of the Okta authorization server engineers sign in to ([Setting up sign-in with Okta](okta.md)). Not its metadata URL. Needs `auth.client_id` |
+| `auth.client_id` | `ANVIL_OIDC_CLIENT_ID` | | *(required)* | Client ID of the CLI's native application at the issuer. Not a secret. The server accepts only access tokens issued to this client |
 | `auth.audience` | `ANVIL_OIDC_AUDIENCE` | | `api://anvil` | Audience of the access tokens the issuer mints for Anvil |
+| `auth.developer_group` | `ANVIL_AUTH_DEVELOPER_GROUP` | | `anvil-developers` | The issuer's group whose members may create and change services ([roles](api.md#roles)) |
+| `auth.admin_group` | `ANVIL_AUTH_ADMIN_GROUP` | | `anvil-admins` | The issuer's group whose members may also manage bindings, migrate services and permanently delete them |
 | `catalog.source` | `ANVIL_CATALOG` | | *(required)* | The catalog: a local directory, or `git::<url>?ref=<tag or commit>`, such as `git::https://github.com/Laratechs/anvil-catalog.git?ref=v0.3.0` |
 | `catalog.allow_branch` | `ANVIL_CATALOG_ALLOW_BRANCH` | | `false` | Let the catalog source name a branch (development only) |
 | `terraform.binary` | `ANVIL_TERRAFORM_BIN` | | `terraform` | Terraform executable |
@@ -203,8 +211,8 @@ Known limitations:
 - **No way back by itself.** A failed migration leaves the service recording
   the new revision, in phase `failed`. Fix the cause and run the command
   again, or store the earlier values as a new revision and migrate to that.
-- **Any organization member** can migrate, as for bindings, until Anvil has an
-  operator role.
+- **Migrating takes the admin role,** as managing bindings does
+  ([roles](api.md#roles)).
 
 ## Credentials
 
@@ -232,5 +240,9 @@ fetch the catalog and `git::` modules, and in Terraform's GitHub provider
 - **AWS:** credentials in the Organizations management account (or a
   delegated administrator) allowed to create accounts.
 
-Requesters never get these credentials. Their own GitHub token is used only to
-find out who they are.
+Requesters never get these credentials, and Anvil never gets theirs: a
+requester sends an access token their identity provider minted for Anvil,
+which the server verifies against the issuer's published keys
+([Setting up sign-in with Okta](okta.md)). The server holds no secret for
+this, and reads the issuer's metadata when it starts, so it refuses to start
+if the issuer is wrong or unreachable.

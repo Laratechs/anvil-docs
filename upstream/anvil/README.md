@@ -24,8 +24,11 @@ and a service on the platform can attach **add-ons** such as a PostgreSQL
 database. Repeating any request is safe: each one describes the state you
 want, and Anvil converges on it.
 
-Services have no owner. They belong to the organization, and any active member
-can create, change or archive any of them. Anvil grants no team access:
+Services have no owner. They belong to the organization, and any developer can
+create, change or archive any of them. What someone may do is their role,
+from their groups at the identity provider they sign in with: everyone may
+look, developers change services, and admins also decide where deployments
+land and permanently delete services. Anvil grants no team access:
 members reach repositories through the organization's base permission, and
 cloud access is managed outside Anvil.
 
@@ -72,12 +75,12 @@ what is published and where; the words live here, beside the code.
 | `internal/resource` | Resources (service, deployment), merge rules, lifecycle transitions and phase |
 | `internal/operation` | Operation records |
 | `internal/store` | State behind compare-and-swap writes; `File` keeps it in the data directory |
-| `internal/provision` | The request pipeline (validate → authorize → admit → merge → queue) and `Reconcile`, which renders and applies |
+| `internal/provision` | The request pipeline (validate → admit → merge → queue) and `Reconcile`, which renders and applies |
 | `internal/dispatch` | Service queue and worker pool, with a lease per service |
 | `internal/service` | Request type and naming rules |
-| `internal/github` | Anvil's GitHub identity (a GitHub App minting installation tokens, or a dev token) and a read-only client: requester identity, organization membership, name checks |
-| `internal/auth` | Sign-in configuration; `authtest` is a fake issuer for tests |
-| `internal/signin` | The CLI's sign-in: the OAuth device flow against the issuer |
+| `internal/github` | Anvil's GitHub identity (a GitHub App minting installation tokens, or a dev token) and a read-only client for name checks |
+| `internal/auth` | Who is calling and what they may do: sign-in configuration, the verifier for the issuer's access tokens, and the role policy; `authtest` is a fake issuer for tests |
+| `internal/signin` | The CLI's sign-in: the OAuth device flow against the issuer, and token refresh |
 | `internal/credentials` | The CLI's credentials file |
 | `internal/catalog` | Fetches and pins the catalog, checks settings against its definitions, and generates each service's root module (`main.tf.json`) |
 | `internal/terraform` | Runs the `terraform` CLI and reports its progress |

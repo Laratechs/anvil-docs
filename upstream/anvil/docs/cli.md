@@ -7,17 +7,18 @@ command for its options and examples.
 
 ## Set up
 
-Install the binary, point it at your server, and sign in to GitHub:
+Install the binary, point it at your server, and sign in:
 
 ```
 go install github.com/Laratechs/anvil/cmd/anvil@latest
 export ANVIL_URL=https://anvil.example.com   # default http://localhost:8080
-gh auth login
+anvil login
 ```
 
-Anvil identifies you by your GitHub account, using `ANVIL_TOKEN` if set and
-otherwise `gh auth token`. It uses the token only to find out who you are and
-that you're an active member of the organization.
+`anvil login` signs you in with the organization's identity provider
+([Signing in](#signing-in)). To have commands also wait for your service's CI
+on GitHub, sign in to the GitHub CLI too (`gh auth login`); that token stays
+on your machine.
 
 From a checkout, `make install` builds the binary from your working tree into
 `~/.local/bin/anvil` (set `BINDIR` to put it elsewhere), stamped with
@@ -100,7 +101,8 @@ and which resources hold data that is lost. What each one removes is in
 ## For platform engineers
 
 Operators manage **cloud bindings**, which say where a provider's
-deployments land, such as the shared GCP project:
+deployments land, such as the shared GCP project. Changing them, and
+migrating services, takes the admin role:
 
 ```
 anvil binding create -provider=gcp -set project_id=example-services -set workload_identity_provider=projects/.../providers/laratechs gcp-shared
@@ -120,30 +122,51 @@ anvil catalog render -cloud=gcp -bindings b.json orders ./out
 
 Setting these up is covered in [Running the server](server.md).
 
-## Signing in with Okta
-
-Sign-in through the organization's identity provider is being introduced in
-steps, and will replace the GitHub token above. On a server configured for
-it ([Setting up sign-in with Okta](okta.md)):
+## Signing in
 
 ```
 anvil login     # prints a link and a code, and waits for you to approve in a browser
-anvil whoami    # who you are signed in as
-anvil logout    # remove the stored credentials
+anvil whoami    # who the server takes you to be, your groups and your role
+anvil logout    # remove the stored credentials and end the sign-in at the identity provider
 ```
 
-Open the link in any browser, on this machine or another, check the code
-and approve. Anvil never sees your password, and the token the CLI receives
-works only for Anvil.
+`anvil login` prints a link and a code. Open the link in any browser, on this
+machine or another, check the code and approve; the command finishes by
+itself. Anvil never sees your password, and the token the CLI receives works
+only for Anvil. Anvil doesn't take GitHub tokens: `ANVIL_TOKEN` is no longer
+read.
+
+What you may do is your role, from your groups at the identity provider.
+Everyone signed in may look. Creating and changing services takes the
+developer role, and managing bindings, migrating services and `-force`
+deletes take the admin role. A command you may not run says which group's
+members may; once you have been added, run `anvil login` again.
+
+The access token lasts about an hour, and the CLI replaces it without a
+prompt for as long as your identity provider allows. When that ends, a
+command says to run `anvil login` again.
 
 Credentials are kept per Anvil server in `credentials.json`, in
 `$ANVIL_CONFIG_DIR` if set and otherwise the `anvil` directory of your
 configuration directory (`~/.config/anvil` on Linux,
-`~/Library/Application Support/anvil` on macOS). The file is readable only
-by you. The CLI signs in only to a server address that is `https`, or `http`
-on this machine.
+`~/Library/Application Support/anvil` on macOS). How the CLI looks after
+them:
 
-For now the other commands still identify you by your GitHub token.
+- The file is readable only by you (mode `600`). If it is ever readable by
+  others, commands refuse to use it and say how to fix it.
+- Credentials are sent only to a server address that is `https`, or `http`
+  on this machine.
+- Commands running at once take turns replacing an expired token, through a
+  lock file beside it (`credentials.json.lock`), so they never sign each
+  other out.
+- `anvil logout` removes the entry and tells the identity provider to revoke
+  the sign-in, so a copy of the file stops working too. If the provider
+  can't be reached, the entry is still removed and the command says so.
+- When the identity provider ends a sign-in (it expired or was revoked), the
+  entry is removed and the next command says to run `anvil login`.
+
+The file isn't in your operating system's keychain: anything running as you
+can read it.
 
 ## Conventions
 

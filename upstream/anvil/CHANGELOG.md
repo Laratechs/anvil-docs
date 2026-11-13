@@ -11,7 +11,45 @@ listed under **Breaking changes**.
 
 ## Unreleased
 
+### Breaking changes
+
+- **Roles from the identity provider's groups: viewer, developer, admin.**
+  Until now anyone who could reach Anvil could do everything. Now everyone
+  signed in may read; members of `anvil-developers` may create and change
+  services; and only members of `anvil-admins` may create, update or delete
+  bindings, migrate services, and permanently delete them (`-force`). A
+  caller without the role gets `403` naming the group. The groups come from
+  the access token's `groups` claim, which the authorization server must be
+  set up to send ([Okta setup](docs/okta.md#4-create-the-groups-and-the-groups-claim));
+  without it everyone is a viewer. `auth.developer_group` and
+  `auth.admin_group` (`ANVIL_AUTH_DEVELOPER_GROUP`,
+  `ANVIL_AUTH_ADMIN_GROUP`) name other groups. `anvil whoami` and
+  `GET /v1/whoami` show the role ([Roles](docs/api.md#roles)) (#55).
+
+- **Anvil no longer takes GitHub tokens: sign in with `anvil login`.** The
+  API accepts only access tokens the organization's identity provider
+  minted for Anvil, and verifies them against the issuer's published keys:
+  issuer, audience, expiry, and the CLI's client ID. A caller's GitHub
+  token, which every request used to carry, is answered `401`. The CLI sends
+  the token `anvil login` stored, refreshing it when it expires, and only to
+  an `https` server or one on this machine; `ANVIL_TOKEN` is no longer read.
+  The server refuses to start without `auth { issuer, client_id }`
+  (`ANVIL_OIDC_ISSUER`, `ANVIL_OIDC_CLIENT_ID`;
+  [Setting up sign-in with Okta](docs/okta.md)). The requester recorded on
+  operations and bindings is now the identity provider's login, not a
+  GitHub login, and the check that a caller is an active member of the
+  GitHub organization is gone: what a caller may do is their role (above). New: `GET /v1/whoami`, which
+  `anvil whoami` now shows (#54).
+
 ### Added
+
+- **The CLI looks after stored credentials.** Commands running at once take
+  turns refreshing an expired token, so the identity provider's refresh
+  token rotation never signs one of them out. `anvil logout` revokes the
+  sign-in at the identity provider as well as removing it from the machine.
+  A credentials file other users can read is refused, and a sign-in the
+  provider has ended is removed
+  ([Signing in](docs/cli.md#signing-in)) (#56).
 
 - **Sign in with Okta: `anvil login`, `anvil whoami`, `anvil logout`.**
   The first step of replacing the GitHub token callers send today. A server
@@ -20,8 +58,7 @@ listed under **Breaking changes**.
   `anvil login` signs in with the OAuth device flow and stores the
   credentials in a file only the user can read
   ([Setting up sign-in with Okta](docs/okta.md),
-  [Signing in with Okta](docs/cli.md#signing-in-with-okta)). The API doesn't accept these
-  tokens yet (#53).
+  [Signing in](docs/cli.md#signing-in)) (#53).
 
 ### Breaking catalog changes
 

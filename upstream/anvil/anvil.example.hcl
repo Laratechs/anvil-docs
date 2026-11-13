@@ -25,6 +25,12 @@ auth {
   issuer    = "https://example.okta.com/oauth2/aus1example" # ANVIL_OIDC_ISSUER: the authorization server's issuer URI, not its metadata URL
   client_id = "0oa1example"                                 # ANVIL_OIDC_CLIENT_ID: the CLI's native application
   # audience = "api://anvil"                                # ANVIL_OIDC_AUDIENCE: the audience of the authorization server
+
+  # The issuer's groups that grant Anvil's roles. Everyone signed in may
+  # read; developers create and change services; admins also manage
+  # bindings, migrate services and permanently delete them.
+  developer_group = "anvil-developers" # ANVIL_AUTH_DEVELOPER_GROUP
+  admin_group     = "anvil-admins"     # ANVIL_AUTH_ADMIN_GROUP
 }
 
 catalog {
