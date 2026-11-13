@@ -24,6 +24,52 @@ From a checkout, `make install` builds the binary from your working tree into
 `~/.local/bin/anvil` (set `BINDIR` to put it elsewhere), stamped with
 `git describe` as its version. `make uninstall` removes it.
 
+## Signing in
+
+```
+anvil login     # prints a link and a code, and waits for you to approve in a browser
+anvil whoami    # who the server takes you to be, your groups and your role
+anvil logout    # remove the stored credentials and end the sign-in at the identity provider
+```
+
+`anvil login` prints a link and a code. Open the link in any browser, on this
+machine or another, check the code and approve; the command finishes by
+itself. Anvil never sees your password, and the token the CLI receives works
+only for Anvil. Anvil doesn't take GitHub tokens: `ANVIL_TOKEN` is no longer
+read.
+
+What you may do is your role, from your groups at the identity provider.
+Everyone signed in may look. Creating and changing services takes the
+developer role, and managing bindings, migrating services and `-force`
+deletes take the admin role. A command you may not run says which group's
+members may; once you have been added, run `anvil login` again.
+
+The access token lasts about an hour, and the CLI replaces it without a
+prompt for as long as your identity provider allows. When that ends, a
+command says to run `anvil login` again.
+
+Credentials are kept per Anvil server in `credentials.json`, in
+`$ANVIL_CONFIG_DIR` if set and otherwise the `anvil` directory of your
+configuration directory (`~/.config/anvil` on Linux,
+`~/Library/Application Support/anvil` on macOS). How the CLI looks after
+them:
+
+- The file is readable only by you (mode `600`). If it is ever readable by
+  others, commands refuse to use it and say how to fix it.
+- Credentials are sent only to a server address that is `https`, or `http`
+  on this machine.
+- Commands running at once take turns replacing an expired token, through a
+  lock file beside it (`credentials.json.lock`), so they never sign each
+  other out.
+- `anvil logout` removes the entry and tells the identity provider to revoke
+  the sign-in, so a copy of the file stops working too. If the provider
+  can't be reached, the entry is still removed and the command says so.
+- When the identity provider ends a sign-in (it expired or was revoked), the
+  entry is removed and the next command says to run `anvil login`.
+
+The file isn't in your operating system's keychain: anything running as you
+can read it.
+
 ## Create a service
 
 ```
@@ -121,52 +167,6 @@ anvil catalog render -cloud=gcp -bindings b.json orders ./out
 ```
 
 Setting these up is covered in [Running the server](server.md).
-
-## Signing in
-
-```
-anvil login     # prints a link and a code, and waits for you to approve in a browser
-anvil whoami    # who the server takes you to be, your groups and your role
-anvil logout    # remove the stored credentials and end the sign-in at the identity provider
-```
-
-`anvil login` prints a link and a code. Open the link in any browser, on this
-machine or another, check the code and approve; the command finishes by
-itself. Anvil never sees your password, and the token the CLI receives works
-only for Anvil. Anvil doesn't take GitHub tokens: `ANVIL_TOKEN` is no longer
-read.
-
-What you may do is your role, from your groups at the identity provider.
-Everyone signed in may look. Creating and changing services takes the
-developer role, and managing bindings, migrating services and `-force`
-deletes take the admin role. A command you may not run says which group's
-members may; once you have been added, run `anvil login` again.
-
-The access token lasts about an hour, and the CLI replaces it without a
-prompt for as long as your identity provider allows. When that ends, a
-command says to run `anvil login` again.
-
-Credentials are kept per Anvil server in `credentials.json`, in
-`$ANVIL_CONFIG_DIR` if set and otherwise the `anvil` directory of your
-configuration directory (`~/.config/anvil` on Linux,
-`~/Library/Application Support/anvil` on macOS). How the CLI looks after
-them:
-
-- The file is readable only by you (mode `600`). If it is ever readable by
-  others, commands refuse to use it and say how to fix it.
-- Credentials are sent only to a server address that is `https`, or `http`
-  on this machine.
-- Commands running at once take turns replacing an expired token, through a
-  lock file beside it (`credentials.json.lock`), so they never sign each
-  other out.
-- `anvil logout` removes the entry and tells the identity provider to revoke
-  the sign-in, so a copy of the file stops working too. If the provider
-  can't be reached, the entry is still removed and the command says so.
-- When the identity provider ends a sign-in (it expired or was revoked), the
-  entry is removed and the next command says to run `anvil login`.
-
-The file isn't in your operating system's keychain: anything running as you
-can read it.
 
 ## Conventions
 

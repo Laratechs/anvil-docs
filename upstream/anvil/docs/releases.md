@@ -57,6 +57,22 @@ converges with nothing to add, change or destroy.
 What changed in configuration and data across releases, for a server that
 upgrades from one of them.
 
+### Sign-in replaced GitHub tokens
+
+Anvil no longer accepts GitHub tokens from callers. Before upgrading a server:
+
+1. Set up the identity provider and add an `auth { issuer, client_id }` block.
+   The server refuses to start without it
+   ([Setting up sign-in with Okta](okta.md)).
+2. Create the developer and admin groups and the `groups` claim. Without the
+   claim everyone is a viewer and can't change anything.
+3. Tell engineers to run `anvil login`. `ANVIL_TOKEN` is no longer read, and a
+   GitHub token is answered `401`.
+
+From then on, the requester recorded on operations and bindings is the
+identity provider's login, not a GitHub login. The GitHub App no longer needs
+the organization **Members** permission.
+
 ### Removed configuration
 
 The MVP's `ANVIL_REGISTRY`, `ANVIL_REPO_VISIBILITY` and `ANVIL_AWS_*`

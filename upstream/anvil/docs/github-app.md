@@ -22,7 +22,7 @@ from it and hands that token to everything that talks to GitHub:
 
 | Who | Calls |
 | --- | --- |
-| **Anvil itself** (`internal/github`) | Checks that a requester is an active organization member, and whether a repository name is taken; tries to delete a service's ghcr.io image on `-force` (the App can't; see **Packages** below) |
+| **Anvil itself** (`internal/github`) | Checks whether a repository name is taken; tries to delete a service's ghcr.io image on `-force` (the App can't; see **Packages** below) |
 | **git** | Fetches a `git::` catalog and `git::` module sources |
 | **Terraform** (GitHub provider) | Creates, updates, archives and deletes repositories, writes managed files and Actions variables, reads the template repository |
 
@@ -32,8 +32,9 @@ when less than 30 minutes are left, and each Terraform command (`init`,
 `GITHUB_APP_*` in Terraform's environment, so nothing else in the server's
 environment can make Terraform act as someone else.
 
-Requesters' tokens are separate: Anvil uses them only to find out who is
-calling.
+The App is not how people sign in. Requesters sign in with the organization's
+identity provider ([Setting up sign-in with Okta](okta.md)), and Anvil never
+receives a GitHub token from them.
 
 ## 1. Create the App
 
@@ -61,7 +62,6 @@ Grant exactly these and leave everything else at **No access**:
 | Repository → **Workflows** | Read and write | Commit `.github/workflows/ci.yml`. Without it GitHub rejects that commit with a `404`. |
 | Repository → **Variables** | Read and write | Set Actions variables such as `ANVIL_IMAGE` and cloud exports |
 | Repository → **Metadata** | Read-only | Required by GitHub for every App; also lets Anvil check whether a repository name is taken |
-| Organization → **Members** | Read-only | Check that a requester is an active organization member |
 
 **Packages: none, by design.** A service's image (`ghcr.io/<org>/<service>`)
 outlives its repository, and while it exists a new service with the same

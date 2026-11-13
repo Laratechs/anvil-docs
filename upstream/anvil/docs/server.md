@@ -10,13 +10,15 @@ else has a default.
 In a checkout, with the GitHub CLI signed in,
 [Laratechs/anvil-catalog](https://github.com/Laratechs/anvil-catalog) cloned
 beside it, and an Okta authorization server (the free Integrator plan is
-enough):
+enough; [Setting up sign-in with Okta](okta.md) creates one). Start the
+server in one terminal, and sign in from another:
 
 ```
 export ANVIL_OIDC_ISSUER=https://<your-okta-domain>/oauth2/<id>
 export ANVIL_OIDC_CLIENT_ID=<the CLI application's client ID>
-ANVIL_CATALOG=../anvil-catalog go run ./cmd/anvil server
-anvil login
+ANVIL_CATALOG=../anvil-catalog go run ./cmd/anvil server   # terminal 1
+
+anvil login                                                # terminal 2
 ```
 
 A dev server acts as your `gh auth token` and keeps records and Terraform state
@@ -221,7 +223,7 @@ fetch the catalog and `git::` modules, and in Terraform's GitHub provider
 (Anvil passes it as `GITHUB_TOKEN`, fresh for each Terraform command).
 
 - Preferably the identity is a **GitHub App** (`github.app`) with
-  Administration, Contents, Workflows, Variables and Members (read)
+  Administration, Contents, Workflows and Variables
   permissions. Anvil mints short-lived installation tokens, its commits come
   from `<app>[bot]`, and no person ends up as the admin of every repository.
   [Setting up a GitHub App](github-app.md) walks through creating, installing
