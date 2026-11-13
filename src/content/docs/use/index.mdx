@@ -7,8 +7,9 @@ import { LinkCard, CardGrid } from '@astrojs/starlight/components';
 
 You ask Anvil for a **service** by name. Anvil creates a GitHub repository
 with a working app and CI that publishes a versioned container image, and,
-if you ask, a **cloud** for it to run in, such as a Cloud Run service. Every
-request describes the state you want, so repeating one is always safe.
+if you ask, a **deployment**: somewhere for it to run, such as a Cloud Run
+service. Every request describes the state you want, so repeating one is
+always safe.
 
 Services have no owner: any active member of the GitHub organization can
 create, change, archive or restore any of them.
@@ -25,7 +26,9 @@ create, change, archive or restore any of them.
 | I want to… | Start with |
 | --- | --- |
 | Create a service | `anvil service create orders` |
-| Run it on Cloud Run | `anvil service create -cloud=gcp orders` |
+| Create it and run it on the platform | `anvil service create -deploy orders` |
+| Give an existing service somewhere to run | `anvil service deploy orders` |
+| Add a database | `anvil service addon add postgres orders` |
 | See what I have | `anvil service get orders`, `anvil service list` |
 | Pick up a change I stopped waiting for | `anvil operation wait <id>` |
 | Archive it, and restore it later | `anvil service delete orders`, then `anvil service create orders` |
