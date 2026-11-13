@@ -137,6 +137,11 @@ export const groups = [
         from: { source: 'anvil', file: 'docs/github-app.md' },
       },
       {
+        slug: 'run/okta',
+        label: 'Sign-in with Okta',
+        from: { source: 'anvil', file: 'docs/okta.md' },
+      },
+      {
         slug: 'run/cloud-run',
         label: 'Cloud Run setup',
         from: { source: 'anvil', file: 'docs/gcp-setup.md' },

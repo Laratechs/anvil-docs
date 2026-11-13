@@ -15,22 +15,27 @@ service. What a service and each deployment are made of comes from a
 <Steps>
 
 1. **Try it locally.** With Terraform on your `PATH`, the GitHub CLI
-   signed in and a catalog cloned beside an Anvil checkout,
-   `ANVIL_CATALOG=../anvil-catalog go run ./cmd/anvil server` runs a dev
-   server on your own token. See [Running the server](server/).
+   signed in, a catalog cloned beside an Anvil checkout and an Okta
+   authorization server, a dev server runs on your own GitHub token. See
+   [Running the server](server/).
 
-2. **Give Anvil its own GitHub identity.** A deployed server signs in as a
-   GitHub App, not a person. See [GitHub App](github-app/).
+2. **Let engineers sign in.** Engineers sign in with `anvil login` through
+   your identity provider, and its groups decide who may create services and
+   who may manage bindings. See [Sign-in with Okta](okta/).
 
-3. **Write the configuration file.** One reviewable HCL file: data
-   directory, the App, the Terraform state bucket, the catalog source and
-   its settings. See the [configuration file reference](configuration/).
+3. **Give Anvil its own GitHub identity.** A deployed server acts on GitHub
+   as a GitHub App, not a person. See [GitHub App](github-app/).
 
-4. **Say where deployments land.** Create a cloud binding per provider, such
+4. **Write the configuration file.** One reviewable HCL file: data
+   directory, sign-in, the App, the Terraform state bucket, the catalog
+   source and its settings. See the
+   [configuration file reference](configuration/).
+
+5. **Say where deployments land.** Create a cloud binding per provider, such
    as the shared GCP project for Cloud Run. See
    [Cloud Run setup](cloud-run/).
 
-5. **Upgrade deliberately.** Read the changelog's breaking changes before
+6. **Upgrade deliberately.** Read the changelog's breaking changes before
    moving to a new release. See [Releases and upgrades](releases/).
 
 </Steps>
