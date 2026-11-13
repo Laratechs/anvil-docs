@@ -10,8 +10,10 @@ repository.
 A dev server (`go run ./cmd/anvil server`) doesn't need an App: it acts as
 your `gh auth token`.
 
-You need to be an **owner of the GitHub organization** (`Laratechs`, or
-whatever `github.organization` names) to create and install the App.
+**You need:** to be an **owner of the GitHub organization** (`Laratechs`, or
+whatever `github.organization` names), to create and install the App.
+**You'll finish with:** a running server acting as the App, checked with a
+throwaway service.
 
 ## What the App is used for
 
@@ -105,8 +107,7 @@ On the App's page, open **Install App**, choose the organization, and pick
 
 Choose **All repositories**, not a selection. Anvil creates new repositories
 all the time, and it also needs to read the template repository
-(`Laratechs/anvil-template-go` by default), a private `git::` catalog,
-and
+(`Laratechs/anvil-template-go` by default), a private `git::` catalog, and
 repositories created before the App existed.
 
 Anvil finds the installation on the organization (`github.organization`)

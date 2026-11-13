@@ -1,27 +1,89 @@
 # Anvil catalog contract
 
-The catalog contract is the only interface between the Anvil engine and a
-catalog. This document describes contract 3, which adds
-[add-ons](#add-ons-contract-3) to contract 2; Anvil reads both, and a
-contract 2 catalog is a contract 3 catalog without add-ons. It is provisional until Anvil 1.0: it may still break during
-v0.x, and every break is listed under **Breaking catalog changes** in the
-[changelog](../CHANGELOG.md). The decisions behind it are recorded in
-[#11](https://github.com/Laratechs/anvil/issues/11),
-[#36](https://github.com/Laratechs/anvil/issues/36) and their sub-issues,
-and for add-ons in [#42](https://github.com/Laratechs/anvil/issues/42).
+A **catalog** tells Anvil what a service and each deployment are made of. The
+catalog contract is the only interface between the Anvil engine and a catalog:
+what a catalog may declare, and what it may rely on Anvil to do with it. This
+document is the reference for catalog authors.
+
+This document describes contract 3, which adds [add-ons](#add-ons-contract-3)
+to contract 2. Anvil reads both, and a contract 2 catalog is a contract 3
+catalog without add-ons. The contract is provisional until Anvil 1.0: it may
+still break during v0.x, and every break is listed under **Breaking catalog
+changes** in the [changelog](../CHANGELOG.md). The decisions behind it are
+recorded in [#11](https://github.com/Laratechs/anvil/issues/11),
+[#36](https://github.com/Laratechs/anvil/issues/36) and their sub-issues, and
+for add-ons in [#42](https://github.com/Laratechs/anvil/issues/42).
+
+This document describes what Anvil implements. Where it and the code disagree,
+the code is right and this document is a bug.
+
+## The smallest catalog
+
+A catalog is a directory, or the root of a Git repository. This one has a
+single service definition built from a single Terraform module (a stand-in
+that creates nothing real), and reports a repository URL:
+
+```
+catalog.hcl
+definitions/service.hcl
+components/repo/main.tf
+```
+
+```hcl
+# catalog.hcl
+catalog {
+  contract = 3
+}
+```
+
+```hcl
+# definitions/service.hcl
+service {
+  component "repo" {
+    module = "../components/repo"
+    inputs = { name = anvil.name, org = anvil.org }
+  }
+  status {
+    repository_url = "https://github.com/${anvil.org}/${anvil.name}"
+  }
+}
+```
+
+```hcl
+# components/repo/main.tf
+variable "name" { type = string }
+variable "org" { type = string }
+
+resource "terraform_data" "repo" { input = "${var.org}/${var.name}" }
+```
+
+Everything else in this document adds to that: where a service runs
+(`deployment` blocks), what operators and requesters can choose, the Terraform
+providers a definition needs, and what to do when a service is archived or
+deleted. To check a catalog as you write it, render it without a server with
+`anvil catalog render`, and see [Testing a catalog](testing.md#testing-a-catalog).
+
+## Where to look
+
+| To… | Read |
+| --- | --- |
+| Pin versions, or see how Anvil finds a catalog | [Versioning and requirements](#versioning-and-requirements) |
+| Lay out a catalog's files | [Catalog layout](#catalog-layout) |
+| Declare a service or a deployment | [Definition schema](#definition-schema), [Names a definition may reference](#names-a-definition-may-reference) |
+| Let operators and requesters choose values | [Settings, bindings and options](#settings-bindings-and-options) |
+| Report what was built | [Status](#status) |
+| Control what survives an archive or delete | [Exports, archive and delete](#exports-archive-and-delete) |
+| Offer a database or other shared infrastructure | [Add-ons](#add-ons-contract-3) |
+| Move a catalog to a newer contract | [Moving to contract 3](#moving-to-contract-3), [Moving from contract 1](#moving-from-contract-1) |
 
 **Deployments and clouds.** A catalog declares where a service runs with
 `deployment` blocks. A deployment is either platform-managed, on the shared
 infrastructure the platform team runs, or self-managed, in a cloud of the
-service's own such as a GCP project. A service has at most one. Some
-names predate deployments, from when every deployment was called a
-cloud: the `cloud_<name>` key, service bodies' `spec.clouds` and
-`status.clouds`, and a binding's `provider`, which is the deployment's
-name. Where this document says "cloud" for the engine's behavior, read
-"deployment".
-
-This document describes what Anvil implements. Where it and the code
-disagree, the code is right and this document is a bug.
+service's own such as a GCP project. A service has at most one. Some names
+predate deployments, from when every deployment was called a cloud: the
+`cloud_<name>` key, service bodies' `spec.clouds` and `status.clouds`, and a
+binding's `provider`, which is the deployment's name. Where this document says
+"cloud" for the engine's behavior, read "deployment".
 
 ## Purpose and scope
 
@@ -281,14 +343,8 @@ block takes no binding.
   credentials stay in the server environment (see
   [Known limitations](#known-limitations)).
 - **Migration.** Clouds created before clouds recorded a binding are
-  migrated when the server starts: for each cloud definition with a
-  `binding { }` block, the values that block declares are read from the
-  server's settings for that definition, stored as the binding named after
-  the provider at revision 1 (or the existing revision that says the
-  same), and recorded by every such cloud, with no Terraform change. When
-  that fails, the server starts, warns naming each unbound cloud, and
-  their applies fail until the settings are fixed and the server
-  restarts.
+  migrated onto one when the server starts, with no Terraform change
+  ([Releases and upgrades](releases.md#deployments-created-before-bindings)).
 
 ### Options
 

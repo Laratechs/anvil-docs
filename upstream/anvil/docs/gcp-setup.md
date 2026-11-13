@@ -1,12 +1,18 @@
 # Setting up Cloud Run
 
-The platform team's one-time setup for the `gcp` cloud. What each service
+The platform team's one-time setup for the `gcp` deployment. What each service
 gets, and how its CI deploys, is in
 [Running services on Cloud Run](gcp.md).
 
-You need a project, a GitHub identity federation provider for the
-organization, and roles for Anvil's own GCP identity. Then you tell Anvil
-where services land, the project and provider, with a gcp binding.
+This guide has one required path and two optional ones:
+
+1. **[Steps 1 to 5](#1-the-shared-project)** set up Cloud Run on a shared
+   project: the project, GitHub Actions federation, roles for Anvil's own GCP
+   identity, and a gcp binding that tells Anvil where services land.
+2. **[Self-managed projects](#self-managed-projects)** (optional) let a service
+   ask for a GCP project of its own.
+3. **[The postgres add-on](#the-postgres-add-on)** (optional) gives platform
+   services a PostgreSQL database.
 
 ## 1. The shared project
 
@@ -90,17 +96,9 @@ with; only deployments created afterwards use the new one.
 `anvil service migrate NAME` moves one to the new revision
 ([Changing where deployments land](server.md#changing-where-deployments-land)).
 
-**Upgrading from settings.** Earlier releases took the project, region and provider
-from `settings "cloud_gcp"`. Keep them there for the first start of this
-release: the server migrates existing gcp clouds onto a binding named
-`gcp` made from them (revision 1, with no Terraform changes) and offers
-the gcp cloud with it. It then logs a warning naming the file and line
-asking you to remove the attributes, which it ignores from then on. With
-no existing gcp clouds it makes no binding, and the warning gives the
-`anvil binding create` command that holds the same values instead. If the
-values are missing or invalid, the server still starts, logs each gcp
-cloud it couldn't migrate, and their applies fail until you fix the
-settings and restart.
+Upgrading a server that took the project, region and provider from
+`settings "cloud_gcp"`? See
+[Settings that moved to bindings](releases.md#settings-that-moved-to-bindings).
 
 ## 5. Check it
 

@@ -11,6 +11,18 @@ listed under **Breaking changes**.
 
 ## Unreleased
 
+### Added
+
+- **Sign in with Okta: `anvil login`, `anvil whoami`, `anvil logout`.**
+  The first step of replacing the GitHub token callers send today. A server
+  with an `auth { issuer, client_id }` block (`ANVIL_OIDC_ISSUER`,
+  `ANVIL_OIDC_CLIENT_ID`) serves it at `GET /v1/auth/config`, and
+  `anvil login` signs in with the OAuth device flow and stores the
+  credentials in a file only the user can read
+  ([Setting up sign-in with Okta](docs/okta.md),
+  [Signing in with Okta](docs/cli.md#signing-in-with-okta)). The API doesn't accept these
+  tokens yet (#53).
+
 ### Breaking catalog changes
 
 - **Catalog contract 3 adds add-ons.** A catalog that sets

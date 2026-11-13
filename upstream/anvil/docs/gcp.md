@@ -91,6 +91,26 @@ CI file). That push runs CI with the new variables, both for a new
 service and when a cloud is added to an existing one. Its SHA is the
 service's `ci_commit` status, which the CLI follows.
 
+## Rolling back
+
+Each run's `deploy` job deploys the image that run built, by digest. To
+put an earlier version back, re-run the `deploy` job of the run that
+deployed it: on the run's page in GitHub, open the `deploy` job and
+choose **Re-run this job**, or
+
+```
+gh run list --repo Laratechs/orders --branch main      # find the run that deployed the good version
+gh run view RUN_ID --repo Laratechs/orders             # its jobs, with their IDs
+gh run rerun RUN_ID --repo Laratechs/orders --job JOB_ID   # re-run its deploy job
+```
+
+The re-run reuses the earlier run's build, so nothing is rebuilt, and it
+deploys with the same `ci-<service>` identity, so it needs no access to
+the shared project. Nothing pins the old version: the next push to
+`main` deploys again, so revert the bad commit too. GitHub re-runs jobs
+for 30 days after a run, and the image must still be in the service's
+Artifact Registry repository.
+
 ## Known limitations
 
 - **Public became the default.** Services created while the default was

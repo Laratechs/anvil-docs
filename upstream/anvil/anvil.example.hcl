@@ -20,6 +20,13 @@ github {
   }
 }
 
+# How engineers sign in (docs/okta.md). None of it is secret.
+auth {
+  issuer    = "https://example.okta.com/oauth2/aus1example" # ANVIL_OIDC_ISSUER: the authorization server's issuer URI, not its metadata URL
+  client_id = "0oa1example"                                 # ANVIL_OIDC_CLIENT_ID: the CLI's native application
+  # audience = "api://anvil"                                # ANVIL_OIDC_AUDIENCE: the audience of the authorization server
+}
+
 catalog {
   # Required: a local directory, or git::<url>?ref=<tag or commit>. The
   # server's GitHub identity fetches it, so it may be private.
