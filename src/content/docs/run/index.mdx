@@ -7,7 +7,7 @@ import { LinkCard, CardGrid, Steps } from '@astrojs/starlight/components';
 
 Anvil is a single `anvil` binary. `anvil server` runs the API and a pool of
 workers; Terraform provisions everything, one root module and state per
-service. What a service and each cloud are made of comes from a
+service. What a service and each deployment are made of comes from a
 [catalog](../catalogs/), which you choose and pin.
 
 ## From a laptop to production
@@ -26,8 +26,8 @@ service. What a service and each cloud are made of comes from a
    directory, the App, the Terraform state bucket, the catalog source and
    its settings. See the [configuration file reference](configuration/).
 
-4. **Say where clouds land.** Create a cloud binding per provider, such as
-   the shared GCP project for Cloud Run. See
+4. **Say where deployments land.** Create a cloud binding per provider, such
+   as the shared GCP project for Cloud Run. See
    [Cloud Run setup](cloud-run/).
 
 5. **Upgrade deliberately.** Read the changelog's breaking changes before

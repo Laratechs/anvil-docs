@@ -8,7 +8,7 @@ It is written for three people, each with their own section:
 
 | Section | For | Does |
 | --- | --- | --- |
-| **Use Anvil** (`/use/`) | Engineers using Anvil | Create services, add clouds, archive and restore |
+| **Use Anvil** (`/use/`) | Engineers using Anvil | Create services, deploy them, add databases, archive and restore |
 | **Run Anvil** (`/run/`) | Platform engineers running Anvil | Deploy, configure and upgrade the server; GitHub App; cloud bindings |
 | **Build a catalog** (`/catalogs/`) | Catalog authors | The catalog contract and how to test a catalog |
 

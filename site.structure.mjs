@@ -113,7 +113,7 @@ export const groups = [
     label: 'Run Anvil',
     persona: 'Platform engineers running Anvil',
     summary:
-      'Deploy and configure the server, connect it to GitHub and your clouds, and upgrade it.',
+      'Deploy and configure the server, connect it to GitHub and Google Cloud, and upgrade it.',
     pages: [
       { slug: 'run', label: 'Overview' },
       {
@@ -157,7 +157,7 @@ export const groups = [
     label: 'Build a catalog',
     persona: 'Catalog authors',
     summary:
-      'Define what a service and each cloud are made of, and test it against Anvil.',
+      'Define what a service and each deployment are made of, and test it against Anvil.',
     pages: [
       { slug: 'catalogs', label: 'Overview' },
       {

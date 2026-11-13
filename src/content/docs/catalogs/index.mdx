@@ -1,13 +1,13 @@
 ---
 title: Build a catalog
-description: For catalog authors who define what Anvil's services and clouds are made of.
+description: For catalog authors who define what Anvil's services and deployments are made of.
 ---
 
 import { LinkCard, CardGrid, FileTree } from '@astrojs/starlight/components';
 
-Anvil's engine doesn't know what a service or a cloud is made of. A
+Anvil's engine doesn't know what a service or a deployment is made of. A
 **catalog** does: its definitions name the Terraform modules a service and
-each cloud are built from, the settings, bindings and options they accept,
+each deployment are built from, the settings, bindings and options they accept,
 and what they report back. The [catalog contract](contract/) is the only
 interface between the two, versioned and checked when the server loads the
 catalog.
@@ -18,7 +18,7 @@ A catalog is a directory, or the root of a Git repository:
 - catalog.hcl the catalog block: contract version and requirements
 - definitions/
   - service.hcl exactly one service block
-  - cloud-gcp.hcl any number of cloud blocks
+  - deployment-gcp.hcl any number of deployment blocks
 - components/ optional local Terraform modules
   - run/
     - main.tf
@@ -35,5 +35,5 @@ The reference catalog is
   <LinkCard title="Catalog contract" href="contract/" description="Everything a catalog may declare and rely on." />
   <LinkCard title="Testing a catalog" href="../concepts/testing/#testing-a-catalog" description="Content tests with mock providers, and the validation harness against the real thing." />
   <LinkCard title="Changelog" href="../reference/changelog/" description="Breaking catalog changes are listed for every release." />
-  <LinkCard title="Glossary" href="../concepts/glossary/" description="Service, cloud, binding, setting and option." />
+  <LinkCard title="Glossary" href="../concepts/glossary/" description="Service, deployment, binding, setting and option." />
 </CardGrid>
