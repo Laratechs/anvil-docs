@@ -58,7 +58,7 @@ Grant exactly these and leave everything else at **No access**:
 | Permission | Access | Why |
 | --- | --- | --- |
 | Repository → **Administration** | Read and write | Create repositories from the template, set their settings, archive and unarchive them, and delete them on `-force` |
-| Repository → **Contents** | Read and write | Write managed files (CI, lint config) and seed the app code; read kept-in-sync files from the template repository; fetch a `git::` catalog and modules |
+| Repository → **Contents** | Read and write | Write managed files (lint config, the CI settings file) and seed the app code; read kept-in-sync files from the template repository; fetch a `git::` catalog and modules |
 | Repository → **Workflows** | Read and write | Commit `.github/workflows/ci.yml`. Without it GitHub rejects that commit with a `404`. |
 | Repository → **Variables** | Read and write | Set Actions variables such as `ANVIL_IMAGE` and cloud exports |
 | Repository → **Metadata** | Read-only | Required by GitHub for every App; also lets Anvil check whether a repository name is taken |

@@ -37,6 +37,13 @@ Anvil is before 1.0, so some of these will change; the
   its credentials in a file only the user can read, not in the operating
   system's keychain, and the access token is a bearer token: a copy works
   until it expires.
+- **Seeing a service:** the platform team grants the Okta developers group read
+  (`roles/run.viewer`, logging and monitoring viewer) on the shared project
+  once, through Workforce Identity Federation, so developers sign in to the
+  console with the same Okta sign-in as Anvil
+  ([#45](https://github.com/Laratechs/anvil/issues/45)). Anvil makes no
+  grant, so "Anvil grants no access to people" stands. Read is
+  organization-wide, as services have no owner. Anvil doesn't proxy logs.
 - **Naming:** 3–25 characters, lowercase letters, digits and single hyphens,
   starting with a letter. A few generic names are reserved.
 - **CI and registry:** GitHub Actions, with one shared registry
@@ -44,9 +51,10 @@ Anvil is before 1.0, so some of these will change; the
   Images are tagged `0.1.<run>`, `sha-<commit>` and `latest`, and carry a
   BuildKit SBOM and provenance record. Signed GitHub artifact attestations are
   left out because private repositories need GitHub Enterprise Cloud for them.
-- **Boilerplate updates:** managed files (CI, lint config) are re-applied from
+- **Boilerplate updates:** managed files (lint config) are re-applied from
   the catalog's templates on every apply, so platform changes reach existing
-  services. App code is seeded once and never overwritten.
+  services. App code and the CI workflow are seeded once and never
+  overwritten: the CI workflow is the team's after creation (#77).
 - **Where services run:** optional, and a service has one deployment whose type
   can't change ([#36](https://github.com/Laratechs/anvil/issues/36)).
   - **Platform-managed** (the default): a Cloud Run service per service, in one
@@ -77,6 +85,10 @@ Anvil is before 1.0, so some of these will change; the
 
 ### Using Anvil
 
+- **Read access is organization-wide.** Every developer can read every
+  platform-managed service, logs included, once the platform team has set up
+  [developer access](gcp-setup.md#6-developer-access). Anvil doesn't manage
+  it, and has no logs command.
 - **A deployment's type is fixed.** A service can't move between the platform
   and a cloud of its own.
 - **A service with its own cloud can't be archived.** An archive tears a
@@ -86,8 +98,10 @@ Anvil is before 1.0, so some of these will change; the
   AWS account is never deleted by Anvil.
 - **Cloud Run.** Services are public (anyone with the URL can call them) unless
   they choose `-option public=false` or the operator sets `cloud_gcp.public` to
-  `false`. Their runtime account starts with no roles, and settings other than
-  the image are Anvil's. See
+  `false`. Their runtime account reads only secrets named `<service>-*`,
+  whose values never pass through Anvil, and environment variables are
+  committed in the service's repository for CI to deploy; other settings
+  than the image and environment are Anvil's. See
   [Running services on Cloud Run](gcp.md#known-limitations) and
   [Cloud Run setup](gcp-setup.md#known-limitations).
 - **No branch protection.** Service repositories get no branch protection or

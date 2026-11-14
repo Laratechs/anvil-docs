@@ -32,7 +32,7 @@ confirmed them on 2026-11-14. Each closes on a test, not on a judgment.
 
 Built and released, or merged for the next release:
 
-- **Services:** a repository from a chosen template with managed CI and a
+- **Services:** a repository from a chosen template with a CI workflow the team owns and a
   versioned image; archive, restore and force delete; idempotent requests with
   a recorded operation for each change.
 - **Deployments:** platform-managed on Cloud Run, ending with a URL serving
@@ -65,11 +65,11 @@ gate 1: a workflow that isn't on it doesn't hold up 1.0.
 
 | Gap | State | Issue |
 | --- | --- | --- |
-| Secrets and runtime configuration for a Cloud Run service | Ready | [#6](https://github.com/Laratechs/anvil/issues/6) |
+| Secrets and runtime configuration for a Cloud Run service | Verify | [#6](https://github.com/Laratechs/anvil/issues/6) |
 | Memory, CPU and scaling: changes made outside Anvil are reset at the next apply | Decide | [#43](https://github.com/Laratechs/anvil/issues/43) |
-| Reading a service's own logs and metrics: developers sign in to the platform's project with Okta | Ready | [#45](https://github.com/Laratechs/anvil/issues/45) |
+| Reading a service's own logs and metrics: developers sign in to the platform's project with Okta | Verify | [#45](https://github.com/Laratechs/anvil/issues/45) |
 | Links to a service's console, logs and CI, which open once #45 is set up | Decide | [#9](https://github.com/Laratechs/anvil/issues/9) |
-| Changing the CI workflow: teams own it after creation | Ready | [#77](https://github.com/Laratechs/anvil/issues/77) |
+| Changing the CI workflow: teams own it after creation | Verify | [#77](https://github.com/Laratechs/anvil/issues/77) |
 | A warning when an apply overwrites a managed file the team changed | Decide | [#79](https://github.com/Laratechs/anvil/issues/79) |
 | Removing a deployment without deleting the service, which also lets its type change | Ready | [#7](https://github.com/Laratechs/anvil/issues/7) |
 | Bringing an existing repository under Anvil | Ready | [#10](https://github.com/Laratechs/anvil/issues/10) |

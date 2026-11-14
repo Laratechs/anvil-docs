@@ -24,7 +24,10 @@ ANVIL_E2E=1 go test ./e2e/ -v -run 'ServiceLifecycle/create'   # one scenario or
 
 - Terraform on your `PATH`.
 - `gh auth login` with the `repo`, `read:org`, `workflow` and `delete_repo`
-  scopes. `TestCloudRun`'s image checks and cleanup also need `read:packages`
+  scopes. `TestCloudRun` also creates and deletes a Secret Manager secret
+  with `gcloud`, so the identity behind your Application Default
+  Credentials needs `roles/secretmanager.admin` on the shared project. Its
+  image checks and cleanup also need `read:packages`
   and `delete:packages`:
   `gh auth refresh -s delete_repo,read:packages,delete:packages`.
 
@@ -100,7 +103,7 @@ with `ANVIL_E2E_URL`.
 
 | Scenario | Catalog | What it protects |
 | --- | --- | --- |
-| `TestServiceTemplate` | Under test | `service create -option template=python` creates the repository from the Python template, with kept-in-sync files the same as the template's, and `template=go` on the same service is refused naming python. Skips on a catalog without the template option |
+| `TestServiceTemplate` | Under test | `service create -option template=python` creates the repository from the Python template, with its CI workflow and kept-in-sync lint configuration the same as the template's. The CI workflow is the team's after creation: an edit to it survives another apply, with no "Update Anvil-managed" commit, while the lint configuration stays in sync. `template=go` on the same service is refused naming python. Skips on a catalog without the template option |
 | `TestServiceLifecycle` | Under test | The whole life of a service: create, a repeated request that changes nothing, archive, restore, and force delete. Checks the repository, its topic and CI file, no team access, and that status lives only under `status`. A developer's force delete is refused, naming the admin group |
 | `TestForceDeleteAfterFailedCreate` | Engine, own server | A create that fails before Terraform writes any state leaves the service `failed`, and force delete still removes the record. Also proves an HCL configuration file's settings reach Terraform, and that an undeclared attribute stops the server naming the file, line and attribute |
 | `TestServiceDeploy` | Engine, own server | A deployment's type is fixed: `service deploy` defaults to platform-managed, then refuses another type or a second deployment. A self-managed service can't be archived, and its force delete names and warns about its own cloud |
@@ -111,14 +114,14 @@ with `ANVIL_E2E_URL`.
 | `TestCloudBinding` | Engine, own server | Bindings on deployments: a deployment records its binding's revision, a binding update re-applies nothing, `service migrate` moves one service on confirmation, and a binding in use can't be deleted |
 | `TestBindingMigration` | Engine, own server | Deployments created before bindings are migrated onto one at start: same generation, nothing re-applied, a second start storing nothing |
 | `TestMovedSettings` | Under test, own server | A configuration file that still sets where Cloud Run services land in `settings "cloud_gcp"` warns, with the `anvil binding create` command, and offers the gcp deployment only once that binding exists |
-| `TestCloudRun` | Under test | The real Cloud Run path: create, deploy by CI, public and private, rolling back by re-running an earlier deploy job ([docs/gcp.md](../docs/gcp.md#rolling-back)), archive and restore, stateful resources named before a delete, and the force delete's image cleanup. Runs only when the server offers the gcp deployment; reads GCP with Application Default Credentials |
+| `TestCloudRun` | Under test | The real Cloud Run path: create, deploy by CI, committed environment variables and a secret the service's runtime identity reads ([docs/gcp.md](../docs/gcp.md#runtime-configuration)), public and private, rolling back by re-running an earlier deploy job ([docs/gcp.md](../docs/gcp.md#rolling-back)), archive and restore, stateful resources named before a delete, and the force delete's image cleanup. Runs only when the server offers the gcp deployment; reads GCP with Application Default Credentials |
 | `TestCatalogRequirements` | Engine, own server | A catalog whose `terraform_version` constraint rules out the server's Terraform stops the server, naming the file, constraint and version |
 | `TestCatalogRenamedAttribute` | Engine, own server | A catalog still using a renamed attribute (`keep_on_delete`) stops the server, naming the file, the old attribute and the new one |
 | `TestCatalogRequired` | Own server | Anvil builds no catalog in: with none configured, or `builtin`, the server refuses to start and says what to set |
 | `TestRemovedVariables` | Engine, own server | A removed MVP variable stops the server and names its replacement |
 | `TestDroppedOption` | Engine, own server | An option the catalog no longer declares is dropped with a warning in the status, and the service still applies. `-option name=null` clears it, and the warning with it; null for a name never stored is refused |
 | `TestSignIn` | Under test | Signing in and roles: a command before `anvil login` says to sign in, login stores credentials only the user can read, `whoami` shows who the server takes the caller to be and their role, a GitHub token or no token is answered `401`, a viewer can list but not create, a developer can't write bindings, and `logout` signs out and revokes the sign-in at the identity provider. Skips with `ANVIL_E2E_URL` |
-| `TestUpgrade` | Under test, own servers | Upgrades converge: a service made by the baseline release is repeated against this checkout's server and applies with nothing to add, change, destroy or import, keeping every status value |
+| `TestUpgrade` | Under test, own servers | Upgrades converge: a service made by the baseline release is repeated against this checkout's server and applies with nothing to add, change, destroy or import, keeping every status value. The service's `ci.yml` is unchanged by the upgrade (the team owns it); set `ANVIL_E2E_BASELINE_CATALOG` to the catalog from before the change to exercise the move off the managed list |
 
 `TestUpgrade` can't see rendering changes made in Go that leave the catalog's
 files alone, since those don't re-apply.

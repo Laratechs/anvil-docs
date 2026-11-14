@@ -4,14 +4,17 @@ The platform team's one-time setup for the `gcp` deployment. What each service
 gets, and how its CI deploys, is in
 [Running services on Cloud Run](gcp.md).
 
-This guide has one required path and two optional ones:
+This guide has one required path and three optional ones:
 
 1. **[Steps 1 to 5](#1-the-shared-project)** set up Cloud Run on a shared
    project: the project, GitHub Actions federation, roles for Anvil's own GCP
    identity, and a gcp binding that tells Anvil where services land.
-2. **[Self-managed projects](#self-managed-projects)** (optional) let a service
+2. **[Developer access](#6-developer-access)** (optional, step 6) lets
+   developers read their services' logs, metrics and revisions in the
+   console with their Okta sign-in.
+3. **[Self-managed projects](#self-managed-projects)** (optional) let a service
    ask for a GCP project of its own.
-3. **[The postgres add-on](#the-postgres-add-on)** (optional) gives platform
+4. **[The postgres add-on](#the-postgres-add-on)** (optional) gives platform
    services a PostgreSQL database.
 
 ## 1. The shared project
@@ -23,7 +26,8 @@ PROJECT=example-services
 REGION=us-central1
 gcloud services enable --project=$PROJECT \
   run.googleapis.com artifactregistry.googleapis.com iam.googleapis.com \
-  iamcredentials.googleapis.com sts.googleapis.com cloudresourcemanager.googleapis.com
+  iamcredentials.googleapis.com sts.googleapis.com cloudresourcemanager.googleapis.com \
+  secretmanager.googleapis.com
 ```
 
 ## 2. GitHub Actions federation
@@ -57,10 +61,14 @@ identity needs, on the shared project:
 | `roles/artifactregistry.admin` | Create image repositories and grant CI push on each |
 | `roles/iam.serviceAccountAdmin` | Create the two service accounts and grant who may use them |
 | `roles/iam.serviceAccountUser` | Set a service's runtime account on its Cloud Run service |
+| `roles/resourcemanager.projectIamAdmin` | Let each service's runtime account read the secrets named `<service>-*` (a conditional grant), and no others. The Secret Manager API must be enabled; Anvil never reads or writes a secret |
+
+Services created before secrets were supported get the grant on their next
+apply, which fails without that role.
 
 ```
 ANVIL=serviceAccount:anvil@ops-project.iam.gserviceaccount.com   # or user:you@example.com for a dev server
-for role in run.admin artifactregistry.admin iam.serviceAccountAdmin iam.serviceAccountUser; do
+for role in run.admin artifactregistry.admin iam.serviceAccountAdmin iam.serviceAccountUser resourcemanager.projectIamAdmin; do
   gcloud projects add-iam-policy-binding $PROJECT --member=$ANVIL --role=roles/$role --condition=None
 done
 ```
@@ -114,6 +122,84 @@ It reads GCP with your Application Default Credentials
 (`gcloud auth application-default login`). To try a template branch
 before merging it, set `"service": {"template_ref": "BRANCH"}` in the
 settings.
+
+## 6. Developer access
+
+Anvil grants no access to people. Without this step, the engineer who owns
+`orders` can't read its logs or metrics, and pages the platform team during
+an incident. This step is the platform team's grant: developers sign in to
+the Google Cloud console with the same Okta sign-in as `anvil login`, and
+read every platform-managed service in the shared project. Read is
+project-wide because services have no owner and logs can't be scoped to
+one service at the project level
+([Decisions](decisions.md#decisions)). Developers can't change anything:
+rolling back is a re-run of CI ([Rolling back](gcp.md#rolling-back)).
+
+It uses [Workforce Identity Federation](https://docs.cloud.google.com/iam/docs/workforce-identities):
+a workforce pool at the Google Cloud **organization**, with Okta as its
+identity provider. Creating it needs an organization administrator
+(`roles/iam.workforcePoolAdmin` on the organization). The Okta side is in
+[Setting up sign-in with Okta](okta.md#7-let-developers-into-the-google-cloud-console);
+do that first, because the provider needs its client ID and secret.
+
+```
+ORG=123456789012          # gcloud organizations list
+POOL=laratechs
+gcloud iam workforce-pools create $POOL --organization=$ORG \
+  --location=global --display-name="Laratechs" --session-duration=3600s
+gcloud iam workforce-pools providers create-oidc okta \
+  --workforce-pool=$POOL --location=global \
+  --issuer-uri=https://<your-okta-domain>/oauth2/<id> \
+  --client-id=<federation client id> \
+  --client-secret-value=<federation client secret> \
+  --web-sso-response-type=code \
+  --web-sso-assertion-claims-behavior=only-id-token-claims \
+  --attribute-mapping=google.subject=assertion.sub,google.groups=assertion.groups \
+  --attribute-condition="'anvil-developers' in assertion.groups"
+```
+
+The pool ID is unique across all of Google Cloud, so pick your own. The
+issuer is the one from [Okta step 1](okta.md#1-create-the-authorization-server),
+and the condition lets in only members of the developer group. The client
+secret goes to Google and not to Anvil; Anvil never holds it.
+
+Then grant the group, on the shared project (the group name is its value in
+the token's `groups` claim):
+
+```
+GROUP=principalSet://iam.googleapis.com/locations/global/workforcePools/$POOL/group/anvil-developers
+for role in browser run.viewer logging.viewer monitoring.viewer; do
+  gcloud projects add-iam-policy-binding $PROJECT --member=$GROUP --role=roles/$role --condition=None
+done
+```
+
+| Role | Why |
+| --- | --- |
+| `roles/browser` | Open the project in the console |
+| `roles/run.viewer` | See every Cloud Run service and its revisions |
+| `roles/logging.viewer` | Read logs (of every service in the project) |
+| `roles/monitoring.viewer` | Read metrics |
+
+Developers sign in at
+
+```
+https://auth.cloud.google/signin/locations/global/workforcePools/laratechs/providers/okta?continueUrl=https://console.cloud.google/
+```
+
+This is the **console (federated)**, which offers the products that
+support federation; Cloud Run, Logging and Monitoring are among them.
+Tell developers the link, or the provider name
+(`locations/global/workforcePools/laratechs/providers/okta`) the sign-in
+page asks for.
+
+Changing the group's grants, or removing someone from `anvil-developers` in
+Okta, takes effect at their next sign-in; an open console session lasts the
+pool's session duration (an hour here).
+
+**Check it.** As someone in `anvil-developers` and not a project member,
+open the link above, then the shared project's Cloud Run page and Logs
+Explorer: both show every service. As someone outside the group, the
+sign-in is refused.
 
 ## Public or private services
 
@@ -265,6 +351,11 @@ test project before offering it
 
 ## Known limitations
 
+- **Developer read is organization-wide.** Step 6 lets every developer read
+  every service's logs, metrics and revisions in the shared project, and
+  Anvil doesn't manage it: a grant made by hand isn't removed when the
+  group's name changes. Per-service log views would narrow logs, at the cost
+  of a boundary nothing else in Anvil has.
 - **Shared quota and blast radius.** Every service shares the project's
   quotas and its project-level IAM. Anyone with project-wide Run or
   Artifact Registry roles can change any service.

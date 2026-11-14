@@ -17,7 +17,7 @@ For each service, in the shared project and region, Anvil creates:
 | --- | --- | --- |
 | Cloud Run service | `orders` | Runs the service. Serves a placeholder until CI's first deploy. Public unless the service chooses `-option public=false` ([Public or private](#public-or-private)) |
 | Artifact Registry repository | `orders` | The service's images, `REGION-docker.pkg.dev/PROJECT/orders/orders` |
-| Service account | `run-orders` | What the service runs as. It has no roles; grant what the service needs |
+| Service account | `run-orders` | What the service runs as. It can read the Secret Manager secrets named `orders-*` in the shared project ([Runtime configuration](#runtime-configuration)), and has no other roles |
 | Service account | `ci-orders` | What CI deploys as. Only workflows in `Laratechs/orders` can use it, and it can only push to `orders`'s image repository, deploy the `orders` Cloud Run service, and run it as `run-orders` |
 
 It sets these Actions variables on the service's repository, which the
@@ -73,7 +73,8 @@ Services that don't choose follow the platform team's default
 ## How CI deploys
 
 The template's CI (`.github/workflows/ci.yml` in
-`Laratechs/anvil-template-go`, kept in sync by Anvil) has two jobs that
+`Laratechs/anvil-template-go`, copied into a service when it is created and
+the team's after that) has two jobs that
 run on pushes to `main`. `push` runs when `ANVIL_GCP_IMAGE` is set: it
 exchanges the workflow's GitHub OIDC token for the `ci-<service>`
 identity and pushes the image to `ANVIL_GCP_IMAGE`. `deploy` needs it and
@@ -91,6 +92,58 @@ commits `.github/anvil-ci.env` after setting them (and after the managed
 CI file). That push runs CI with the new variables, both for a new
 service and when a cloud is added to an existing one. Its SHA is the
 service's `ci_commit` status, which the CLI follows.
+
+## Runtime configuration
+
+A service's environment variables and secrets are committed in its own
+repository, and the `deploy` job sets them on every deploy. Anvil stays out
+of rollouts: it grants access and never sees a value.
+
+- **Environment variables** go in `.github/runtime-env.yaml`, as
+  `KEY: value` lines. Don't put secrets in it.
+- **Secrets** are Secret Manager secrets in the shared project whose names
+  start with the service's name (`orders-db-password` for `orders`).
+  `run-orders` can read those and no others. `.github/runtime-secrets.txt`
+  maps each to an environment variable, one `ENV_VAR=secret-name:version`
+  per line (`#` starts a comment):
+
+  ```
+  DB_PASSWORD=orders-db-password:latest
+  ```
+
+The deploy sets exactly what the files say, so removing a line (or a file)
+removes the variable from the next revision. Cloud Run only starts a
+revision whose runtime identity can read every secret it references, so a
+deploy that names a missing secret, or one that isn't named `orders-*`,
+fails and the earlier revision keeps serving.
+
+Writing a secret is the team's own step, with `gcloud`, so a value never
+passes through Anvil or the repository:
+
+```
+printf %s "$VALUE" | gcloud secrets create orders-db-password \
+  --project=PROJECT --data-file=-
+printf %s "$NEW_VALUE" | gcloud secrets versions add orders-db-password --data-file=-   # rotate
+```
+
+Creating and adding versions needs access to the shared project's Secret
+Manager, which is granted outside Anvil. A `latest` reference picks up a
+new version on the next deploy; pin a number to control when it changes.
+
+## Seeing a service
+
+Developers read their service in the shared project's console: logs,
+metrics, revisions and the Cloud Run service's settings. The platform team
+grants that once to the Okta developers group, and Anvil grants nothing to
+people ([Developer access](gcp-setup.md#6-developer-access)). Developers
+sign in at the link the platform team gives them, with the same Okta account
+as `anvil login`.
+
+Read is organization-wide: every developer can read every platform-managed
+service, logs included, which matches services having no owner. It is read
+only: changing a service is a CI deploy, and going back is
+[Rolling back](#rolling-back). A service with a project of its own is
+managed by its team, who set their own access.
 
 ## Rolling back
 
@@ -123,12 +176,22 @@ Artifact Registry repository.
   Actions runs with your GitHub token. If it can't (or Actions is
   disabled), the command fails after Anvil's change succeeded; CI still
   deploys on its own. Use `-wait-deploy=false` to skip the wait.
-- **CI owns the image only.** Terraform ignores the image and revision
-  fields so it doesn't roll back deploys, but resets other settings
-  (environment variables, scaling, memory) to Anvil's on the next apply.
+- **CI owns the image and the environment.** Terraform ignores the image,
+  revision and environment fields so it doesn't roll back deploys, but
+  resets other settings (scaling, memory) to Anvil's on the next apply.
   Settings a service can choose are future work.
-- **Runtime access.** `run-<service>` starts with no roles. Grant what the
-  service needs (Secret Manager, Cloud SQL, ...) outside Anvil.
+- **Secret names are the boundary.** `run-<service>` reads every secret
+  named `<service>-*`, so a service whose name is the start of another's
+  (`orders` and `orders-eu`) can read that service's secrets. Avoid such
+  names, or name secrets so they don't overlap.
+- **No logs through Anvil.** Developers read logs in the console, with access
+  the platform team grants. `anvil service` has no logs command, and Anvil
+  doesn't hand out access itself. Without the platform team's step, the
+  console shows permission errors.
+- **Other runtime access.** Anything besides secrets (Cloud SQL, ...) is
+  granted outside Anvil, except what an add-on grants.
+- **Secrets are mounted at deploy.** A rotated `latest` secret reaches the
+  service on its next deploy, not before.
 - **Repository renames.** CI is trusted by repository name
   (`attribute.repository`). Anvil never renames repositories; one renamed by
   hand loses its deploy access, and a new repository given the old name
