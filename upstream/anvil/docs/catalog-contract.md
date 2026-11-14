@@ -217,9 +217,11 @@ deployment "gcp" {
 | `exports` | deployment | no | An object of strings offered to the service (see [Exports, archive and delete](#exports-archive-and-delete)). |
 | `status { }` | both | no | Values for the status keys Anvil declares (see [Status](#status)). |
 | `lifecycle { archive_targets, destroy_on_delete, stateful }` | see [Exports, archive and delete](#exports-archive-and-delete) | no | Lists of definition-relative addresses. `archive_targets` is for the service only. |
+| `import { to, id }` | service | no | A resource an existing repository is adopted into (see [Importing](#importing-an-existing-repository)). `to` is a literal definition-relative address, such as `"repository.github_repository.this"`; `id` is an expression, usually `anvil.name`. Repeat the block for more than one resource. |
 
 Any other attribute or block is a load error, including `type`,
-`binding`, `enabled_when` or `exports` on the service, a deployment
+`binding`, `enabled_when` or `exports` on the service, `import` on a
+deployment, a deployment
 without a `type`, a `cloud` block, `archive_targets` on a deployment, an
 unknown status key, and the old `keep_on_delete` (now
 `destroy_on_delete`). Literal-only fields (`type`, `title`, `source`,
@@ -539,6 +541,47 @@ requesters' terms for progress output. It never changes what is applied.
 - Invalid JSON in a local manifest is a load error. Unknown fields are
   ignored.
 
+## Importing an existing repository
+
+A repository that predates Anvil can become a service
+(`anvil service import`) when the catalog's service says what to adopt:
+
+```hcl
+service {
+  # ...
+  import {
+    to = "repository.github_repository.this"
+    id = anvil.name
+  }
+}
+```
+
+The block is additive: a catalog without it works as before, and
+`anvil service import` is refused, saying the catalog has no import block.
+Servers older than the release that reads the block fail to load a catalog
+that declares it, so such a catalog sets `requires_anvil` to that release.
+
+- **Rendering.** A service made by import has `spec.imported`, and Anvil
+  renders each import block into the root module as Terraform's
+  `import { to = module.service_<component>.<address>, id = ... }`. A
+  service never made by import renders none. Terraform ignores an import
+  for an object already in state, so the block stays for the service's life.
+- **What the requester is shown.** Before it applies, Anvil plans the
+  service's root module, with the import, in a scratch directory with no
+  state lock, and reports the plan: attributes of the imported resources
+  that would change (`github_repository`), and which `github_repository_file`
+  resources would create a file the repository already has, which overwrites
+  it. The requester confirms by naming the service. Nothing in the
+  repository changes before that.
+- **No code is seeded.** The module's template arguments must be ignored once
+  a repository exists, as the Laratechs catalog's `ignore_changes` does, so
+  the template's code never reaches an imported repository. Kept-in-sync
+  files still do: they are the managed files the plan lists.
+- **Import takes no deployment.** Give the service one afterwards, as for any
+  service.
+- **Force delete destroys the imported repository,** as for any service:
+  `destroy_on_delete` doesn't know where a repository came from.
+
 ## Engine behaviours
 
 **Generated root module.** For each service, Anvil writes `main.tf.json`
@@ -678,7 +721,8 @@ Requesters ask for a deployment by type, with `anvil service deploy`
 the catalog offers: one that is enabled and, if its definition takes a
 binding, has a valid one. A catalog that offers several of a type makes
 requesters name one (`-deployment=<name>`), so most catalogs offer one of
-each. A service has one deployment, and its type can't change.
+each. A service has one deployment, and its type can't change while it
+has one.
 
 ## Moving to contract 3
 
@@ -697,8 +741,11 @@ address, so existing services re-apply with no Terraform changes.
 
 ## Known limitations
 
-- **A deployment's type is fixed.** A service can't move from a
-  platform-managed deployment to a self-managed one, or back.
+- **A deployment's type is fixed while it is deployed.** A service can't
+  move from a platform-managed deployment to a self-managed one, or back,
+  in one step. `anvil service undeploy` removes the deployment (deleting
+  its resources, a self-managed one's whole cloud, and the tenants of its
+  add-ons), after which the service can be deployed again, of either type.
 - **Old names.** Service bodies and generated names still say `cloud`
   for a deployment, as described at the top.
 - **Instances aren't migrated.** An add-on instance keeps the binding

@@ -56,7 +56,9 @@ Anvil is before 1.0, so some of these will change; the
   services. App code and the CI workflow are seeded once and never
   overwritten: the CI workflow is the team's after creation (#77).
 - **Where services run:** optional, and a service has one deployment whose type
-  can't change ([#36](https://github.com/Laratechs/anvil/issues/36)).
+  can't change while it is deployed ([#36](https://github.com/Laratechs/anvil/issues/36),
+  [#7](https://github.com/Laratechs/anvil/issues/7)): `anvil service undeploy`
+  removes it, and the service can then get either type.
   - **Platform-managed** (the default): a Cloud Run service per service, in one
     shared GCP project the platform team runs. Anvil provisions the slot and the
     identities. The service's CI pushes to its own Artifact Registry repository

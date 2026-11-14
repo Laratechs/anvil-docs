@@ -86,13 +86,40 @@ Ctrl-C stops the waiting, not the change. Pick it back up with
 `anvil operation wait <id>`, or skip the wait with `-wait=false`, which prints
 the operation instead.
 
+## Bring an existing repository under Anvil
+
+```
+anvil service import orders
+```
+
+A repository that predates Anvil can become a service with the same name.
+Anvil never adds application code: your code stays as it is. It first shows
+what it will change, and you confirm by typing the service name:
+
+- the files Anvil manages (lint configuration, and for now the CI workflow)
+  that the repository already has, which Anvil's versions replace, and the
+  ones it adds;
+- the repository settings it manages differently, such as visibility and
+  merge options, with their current and new values.
+
+The repository's description is one of those settings: without
+`-description` Anvil replaces it with a generated one, and the list shows it.
+Nothing changes before you confirm, and `-confirm=orders` skips the prompt
+in a script. Choose the template its kept-in-sync files come from with
+`-option template=python` when it isn't the default. Afterwards it is an
+ordinary service: give it somewhere to run with `anvil service deploy`.
+Deleting it with `-force` deletes the repository, as for any service. A
+catalog must say how to import ([the contract](catalog-contract.md#importing-an-existing-repository));
+without it the command says so.
+
 ## Give a service somewhere to run
 
 A **deployment** is where a service runs. It is **platform-managed** (the
 default: on the platform, the shared infrastructure the platform team runs) or
 **self-managed** (a cloud of the service's own, which you deploy into
-yourself). A service has at most one, and its type can't change, so choose
-before you deploy.
+yourself). A service has at most one, and its type can't change while it has
+one, so choose before you deploy. `anvil service undeploy` removes it
+([below](#remove-a-deployment)).
 
 ```
 anvil service deploy orders                          # on the platform
@@ -115,6 +142,21 @@ with or without a deployment
 (`anvil service create -option template=python orders`), and Anvil gives
 each option to whichever declares it. For Cloud Run, see
 [Running services on Cloud Run](gcp.md).
+
+## Remove a deployment
+
+```
+anvil service undeploy orders    # keeps the service and its repository
+```
+
+This deletes the deployment's resources as `anvil service delete -force`
+does: a Cloud Run service with its images, the tenants of any add-ons
+attached to it with their data, and for a self-managed deployment the whole
+cloud, such as a project, with everything your team built in it. Anvil lists
+what goes, naming the resources that hold data, and asks you to type the
+service name. Afterwards the service has no deployment and can be deployed
+again, of either type. A service with no deployment is left as it is, and
+repeating the command after a failure retries it.
 
 ## Add a database
 

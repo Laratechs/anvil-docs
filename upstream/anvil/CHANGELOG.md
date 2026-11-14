@@ -11,6 +11,18 @@ listed under **Breaking changes**.
 
 ## Unreleased
 
+### Added
+
+- **`anvil service undeploy NAME`** removes a service's deployment and
+  keeps the service and its repository (`DELETE
+  /v1/services/{name}/deployment`). It deletes what a force delete would of
+  the deployment, with the same warnings: a self-managed deployment's whole
+  cloud, and the tenants of its add-ons. It is idempotent. A deployment's
+  type is now fixed only while the service has one, so a service can be
+  deployed again, of either type, after an undeploy (#7). The template's CI
+  must skip delivery once the deployment's variables are gone: see the
+  catalog's release notes.
+
 ### Breaking changes
 
 - **The Laratechs catalog's template setting is now a requester option.**
@@ -21,6 +33,22 @@ listed under **Breaking changes**.
   `settings "service" { }` first, or the server stops at start naming it.
   Existing services, all from the Go template, record `go` at their next
   apply and change nothing (#61).
+
+### Added
+
+- **`anvil service import NAME`** brings a repository that predates Anvil
+  under it, as the service of the same name. It never adds application
+  code. It first shows what it changes: the existing files Anvil's managed
+  files overwrite, the files it adds, and the repository settings the
+  catalog manages differently, and asks you to type the service name. The
+  service then works as any other. `POST /v1/import-plans` returns the
+  preview, and `POST /v1/services` takes `"import": true` with `?confirm=`.
+  Terraform adopts the repository through a catalog's new `import { to, id }`
+  block on its service, an additive part of contract 3: a catalog without it
+  can't be imported into, and the Laratechs catalog's block needs this
+  release or later. `anvil catalog render -import` renders it. The choice of
+  whether Anvil's CI replaces an existing one waits for team-owned CI (#77)
+  (#10).
 
 ## v0.2.0 (2026-11-13)
 

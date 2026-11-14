@@ -40,11 +40,13 @@ takes is one of these requests.
 
 | Method and path | Body | Result |
 | --- | --- | --- |
-| `POST /v1/services` | `{"name","description"?,"type"?,"deployment"?,"options"?,"binding"?}` | `200` service if unchanged, `202` operation queued |
+| `POST /v1/services` | `{"name","description"?,"type"?,"deployment"?,"options"?,"binding"?,"import"?}` | `200` service if unchanged, `202` operation queued |
+| `POST /v1/import-plans` | the same body as the create, with no deployment | `200` `{"name","settings"?,"overwrites"?,"adds"?}`, `409` if there is no such repository or the name is already a service, `502` if Terraform couldn't plan |
 | `GET /v1/services` | | `200` `{"services": [...]}` |
 | `GET /v1/services/{name}` | | `200` service, with an `ETag` |
 | `DELETE /v1/services/{name}?confirm={name}[&force=true]` | | `200` if unchanged, `202` operation queued |
 | `POST /v1/services/{name}/deployment` | `{"type"?,"deployment"?,"options"?,"binding"?}` | `200` if unchanged, `202` operation queued, `409` for another type or a second deployment |
+| `DELETE /v1/services/{name}/deployment?confirm={name}` | | `200` if the service has no deployment, `202` operation queued, `400` without `confirm`, `409` for an archived service or a deployment Anvil can't delete |
 | `POST /v1/services/{name}/migrate?confirm={name}` | | `200` if unchanged, `202` operation queued, `409` if the binding's latest revision isn't valid |
 
 A service body has `spec`, `status` (with the derived `phase`) and
@@ -52,6 +54,24 @@ A service body has `spec`, `status` (with the derived `phase`) and
 `status.repository_url` and `status.image`, and each deployment, with its
 catalog definition's `title`, in `status.clouds`. Services have no team: a body
 with `team`, or `?team=` on the list, is a `400` saying to omit it.
+
+### Importing a repository
+
+`"import": true` on `POST /v1/services` makes the service from the
+repository that already has its name, instead of creating one from a
+template, and adopts it into the service's Terraform state. It takes no
+deployment (`400`), is a `409` when there is no such repository, when the
+name is already a service made from a template, or when the server's
+catalog declares nothing to import, and needs `?confirm={name}`, as a delete
+does. A create without it for a name an unmanaged repository has is a `409`
+that names the import command.
+
+`POST /v1/import-plans` says what that import would change, without
+changing or recording anything: `settings` lists attributes of the
+repository that would change (`resource`, `setting`, `from`, `to`, as JSON),
+`overwrites` the existing files Anvil's managed files would replace, and
+`adds` the managed files the repository lacks. A caller shows it before it
+confirms. A service made by import has `spec.imported`.
 
 ### Deployments
 
@@ -65,8 +85,15 @@ the deployment its catalog offers for the type; none, or several, is a `400`.
   deployment.
 - On the deployment route, an empty body asks for the deployment the service
   has or, without one, a platform-managed one.
-- A service has one deployment and its type can't change: a request for
-  another type, or another deployment, is a `409`.
+- A service has one deployment and its type can't change while it has it: a
+  request for another type, or another deployment, is a `409`.
+- `DELETE` on the deployment route removes the deployment and keeps the
+  service and its repository. Like a delete, it needs `confirm` repeating the
+  service name, and it deletes what a force delete would of the deployment: a
+  self-managed deployment's whole cloud with everything in it, and the
+  tenants of its add-ons. Afterwards the service can be deployed again, of
+  either type. It is idempotent, and repeating it after a failure retries;
+  until it succeeds, a request for a deployment is a `409`.
 - Archiving a service whose deployment is self-managed and can be deleted is a
   `409`: only `force=true` deletes its cloud.
 

@@ -34,7 +34,8 @@ Built and released, or merged for the next release:
 
 - **Services:** a repository from a chosen template with a CI workflow the team owns and a
   versioned image; archive, restore and force delete; idempotent requests with
-  a recorded operation for each change.
+  a recorded operation for each change; and an existing repository brought
+  under Anvil with `anvil service import`, after it shows what changes.
 - **Deployments:** platform-managed on Cloud Run, ending with a URL serving
   the service's own code, or self-managed in a GCP project of the service's
   own. Bindings say where deployments land, and `anvil service migrate` moves
@@ -65,14 +66,13 @@ gate 1: a workflow that isn't on it doesn't hold up 1.0.
 
 | Gap | State | Issue |
 | --- | --- | --- |
-| Secrets and runtime configuration for a Cloud Run service | Verify | [#6](https://github.com/Laratechs/anvil/issues/6) |
 | Memory, CPU and scaling: changes made outside Anvil are reset at the next apply | Decide | [#43](https://github.com/Laratechs/anvil/issues/43) |
 | Reading a service's own logs and metrics: developers sign in to the platform's project with Okta | Verify | [#45](https://github.com/Laratechs/anvil/issues/45) |
 | Links to a service's console, logs and CI, which open once #45 is set up | Decide | [#9](https://github.com/Laratechs/anvil/issues/9) |
 | Changing the CI workflow: teams own it after creation | Verify | [#77](https://github.com/Laratechs/anvil/issues/77) |
 | A warning when an apply overwrites a managed file the team changed | Decide | [#79](https://github.com/Laratechs/anvil/issues/79) |
-| Removing a deployment without deleting the service, which also lets its type change | Ready | [#7](https://github.com/Laratechs/anvil/issues/7) |
-| Bringing an existing repository under Anvil | Ready | [#10](https://github.com/Laratechs/anvil/issues/10) |
+| Removing a deployment without deleting the service, which also lets its type change | Verify | [#7](https://github.com/Laratechs/anvil/issues/7) |
+| Bringing an existing repository under Anvil: built without the CI choice, which waits for #77 | Verify | [#10](https://github.com/Laratechs/anvil/issues/10) |
 | Work that doesn't fit a Cloud Run service: a scheduled job, a queue worker, a second deployment beside the first | Decide | [#80](https://github.com/Laratechs/anvil/issues/80) |
 
 Logs and metrics ([#45](https://github.com/Laratechs/anvil/issues/45)) are
@@ -172,7 +172,7 @@ open decisions.
 1. **Prove what's built.** Run sign-in, self-managed projects and the
    PostgreSQL add-on for real, and correct the guides. This is checking, not
    building, and everything after it stands on these features.
-2. **Unblock the pilot.** Secrets (#6), import (#10) for the services that
+2. **Unblock the pilot.** Secrets (#6, verified), import (#10) for the services that
    already exist, and team-owned CI (#77).
 3. **Start the pilot** on the current server. Record what it turns up
    against sizing (#43), logs (#45), links (#9) and the limits of Cloud Run

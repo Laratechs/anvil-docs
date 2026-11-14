@@ -119,6 +119,24 @@ any files and recreates the deployment. A deployment whose definition has no
 `destroy_on_delete` (the AWS account) can't be torn down, so its service can't
 be archived.
 
+**Undeploy** (`anvil service undeploy`, `DELETE /v1/services/{name}/deployment`)
+keeps the service active and removes its deployment, with the same
+confirmation, warnings and stateful resources as a force delete names for it.
+It records the deployment (with its options and binding revision) under the
+service's `status.leaving`, and the next apply:
+
+1. Tears the deployment down exactly as an archive does, from that record,
+   keeping the service's resources and its add-on tenants in state.
+2. Applies the service without a deployment. The tenants of the add-ons that
+   were attached are no longer in the configuration, so Terraform destroys
+   them, and an add-on instance goes with its last tenant.
+
+A failed undeploy leaves `status.leaving` set, and repeating the request
+retries it; until it succeeds the service can't be deployed again, and a
+force delete still destroys the deployment. A deployment with no
+`destroy_on_delete` can't be undeployed. An archived service can't be
+undeployed: restore it first.
+
 **Force delete** runs these steps:
 
 1. It tries to delete the service's ghcr.io image. The GitHub provider has no
