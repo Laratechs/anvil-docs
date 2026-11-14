@@ -1,0 +1,122 @@
+/*
+ * Status tables: the markup theme/markdown.mjs adds to an upstream
+ * Markdown table with a "State" column. Tokens only; the four tones are
+ * the design system's status colours, plus a neutral.
+ */
+
+[data-tone='success'] { --tone: var(--anvil-success); --tone-subtle: var(--anvil-success-subtle); }
+[data-tone='info'] { --tone: var(--anvil-info); --tone-subtle: var(--anvil-info-subtle); }
+[data-tone='warning'] { --tone: var(--anvil-warning); --tone-subtle: var(--anvil-warning-subtle); }
+[data-tone='neutral'] { --tone: var(--anvil-text-subtle); --tone-subtle: var(--anvil-surface-raised); }
+
+/* A state: the tone as text and edge, on its subtle background. */
+.anvil-status {
+  display: inline-block;
+  padding: 0.05rem 0.55rem;
+  border: var(--anvil-border-hairline) solid var(--tone);
+  border-radius: 999px;
+  background: var(--tone-subtle);
+  color: var(--tone);
+  font-size: var(--sl-text-xs);
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* An issue reference: a quiet chip in the mono face. */
+.sl-markdown-content a.anvil-issue {
+  display: inline-block;
+  margin: 0.1rem 0.15rem 0.1rem 0;
+  padding: 0 0.4rem;
+  border: var(--anvil-border-hairline) solid var(--anvil-border);
+  border-radius: calc(var(--anvil-radius) / 2);
+  background: var(--anvil-surface-raised);
+  color: var(--anvil-accent-text);
+  font-family: var(--anvil-font-mono);
+  font-size: var(--sl-text-xs);
+  text-decoration: none;
+}
+.sl-markdown-content a.anvil-issue:hover {
+  border-color: var(--anvil-accent);
+}
+
+/* The table itself: the gap gets the room, state and issues stay narrow. */
+.sl-markdown-content table:has(.anvil-status) {
+  display: table;
+  width: 100%;
+}
+.sl-markdown-content table:has(.anvil-status) td:first-child {
+  color: var(--anvil-text);
+}
+.sl-markdown-content table:has(.anvil-status) td:not(:first-child) {
+  vertical-align: top;
+}
+
+/* Counts of each state, under a table's heading and in the summary. */
+.anvil-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.anvil-tally-line {
+  margin-top: 0.75rem;
+}
+
+/* The summary: one row per table, each a link, a bar and a tally. */
+.anvil-progress {
+  margin: 1.5rem 0 2rem;
+  border: var(--anvil-border-hairline) solid var(--anvil-border);
+  border-top: var(--anvil-border-persona-rule) solid var(--anvil-accent);
+  border-radius: var(--anvil-radius);
+  background: var(--anvil-surface-raised);
+}
+.anvil-progress ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.anvil-progress li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+}
+.anvil-progress li + li {
+  border-top: var(--anvil-border-hairline) solid var(--anvil-border);
+}
+.anvil-progress a {
+  color: var(--anvil-text);
+  font-family: var(--anvil-font-heading);
+  font-weight: 600;
+  text-decoration: none;
+}
+.anvil-progress a:hover {
+  color: var(--anvil-accent-text);
+  text-decoration: underline;
+}
+.anvil-progress .anvil-tally {
+  grid-column: 2;
+}
+
+/* The bar: one segment per state, as wide as its count. */
+.anvil-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.anvil-bar span {
+  flex-basis: 0;
+  background: var(--tone);
+}
+
+@media (max-width: 40rem) {
+  .anvil-progress li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .anvil-progress .anvil-tally {
+    grid-column: 1;
+  }
+}

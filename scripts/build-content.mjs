@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pages, sources } from '../site.structure.mjs';
 import { cut, headings, join, parse, plain, rewriteLinks, shiftHeadings } from './lib/markdown.mjs';
+import { decorate } from '../theme/markdown.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const docsDir = path.join(root, 'src/content/docs');
@@ -161,6 +162,8 @@ function render(page) {
     let lines = parsed.slice(c.start, c.end);
     lines = shiftHeadings(lines, c.shift);
     lines = rewriteLinks(lines, (t, img) => resolveLink(page, t, img));
+    // The theme may wrap what it styles (status tables); the words don't change.
+    lines = decorate(lines);
     body = join(lines).replace(/^\n+/, '').replace(/\n+$/, '');
   }
 

@@ -20,6 +20,7 @@ export const theme = {
     // Order matters: tokens first, then anything that uses them.
     './theme/tokens.css',
     './theme/base.css',
+    './theme/status.css',
   ],
   // Replace Starlight's built-in components here, e.g.
   //   components: { Footer: './theme/components/Footer.astro' },

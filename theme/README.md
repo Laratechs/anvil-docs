@@ -8,6 +8,7 @@ site by changing files here only.
 | --- | --- |
 | [`tokens.css`](tokens.css) | The palette, fonts and radius, for dark and light themes, as `--anvil-*` variables, and their mapping onto Starlight's `--sl-*` variables. Start here. |
 | [`base.css`](base.css) | Global rules that tokens can't express (heading font, table corners). Keep it small. |
+| [`markdown.mjs`](markdown.mjs), [`status.css`](status.css) | Status tables: an upstream Markdown table with a `State` column gets badges, issue chips, a tally under its heading and a summary at the top of the page (the roadmap). `markdown.mjs` adds the markup when pages are generated, and holds which tone each state is shown in. |
 | [`components/`](components) | Markup and style for custom pieces: `PersonaCards.astro` (the home page's "where do you want to start" cards). Also where replacements for Starlight's own components go. |
 | [`assets/logo-light.svg`](assets/logo-light.svg), [`assets/logo-dark.svg`](assets/logo-dark.svg) | The header logo (placeholder), one per theme, inked in that theme's `--anvil-accent`. `public/favicon.svg` is the same mark, switching ink with the browser's colour scheme. Change all three together. |
 | [`theme.config.mjs`](theme.config.mjs) | Wires the above into Starlight: logo, favicon, stylesheets, component overrides. |
