@@ -2,7 +2,8 @@
 
 The choices that shape what Anvil does today, and what it doesn't do yet.
 Anvil is before 1.0, so some of these will change; the
-[changelog](../CHANGELOG.md) records each change.
+[changelog](../CHANGELOG.md) records each change. The
+[roadmap](roadmap.md) says what is left before 1.0.
 
 ## Decisions
 

@@ -61,7 +61,7 @@ what is published and where; the words live here, beside the code.
 
 | If you are… | Read |
 | --- | --- |
-| **New to Anvil** | [How Anvil works](docs/how-it-works.md), the [glossary](CONTEXT.md), then [Decisions and known limitations](docs/decisions.md) |
+| **New to Anvil** | [How Anvil works](docs/how-it-works.md), the [glossary](CONTEXT.md), then [Decisions and known limitations](docs/decisions.md) and the [roadmap to 1.0](docs/roadmap.md) |
 | **An engineer using Anvil** | [Using the CLI](docs/cli.md), [Running services on Cloud Run](docs/gcp.md), the [HTTP API](docs/api.md) |
 | **A platform engineer running Anvil** | [Running the server](docs/server.md), the [configuration file](anvil.example.hcl), [Setting up a GitHub App](docs/github-app.md), [Setting up sign-in with Okta](docs/okta.md), [Setting up Cloud Run](docs/gcp-setup.md), [Releases and upgrades](docs/releases.md) |
 | **A catalog author** | The [catalog contract](docs/catalog-contract.md), [Testing a catalog](docs/testing.md#testing-a-catalog), the [changelog](CHANGELOG.md) |
