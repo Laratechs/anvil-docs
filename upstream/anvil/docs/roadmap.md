@@ -1,7 +1,7 @@
 # Roadmap to 1.0
 
 What stands between Anvil today and a 1.0 release. This page is a snapshot
-taken on 2026-11-13, at v0.2.0. The
+taken on 2026-11-14, at v0.2.0. The
 [issue tracker](https://github.com/Laratechs/anvil/issues) is the source of
 truth for each item, and the [changelog](../CHANGELOG.md) records what ships.
 
@@ -12,17 +12,21 @@ Until then a minor release may break
 ([Releases and upgrades](releases.md#releases)), and the catalog contract is
 provisional ([Versioning and requirements](catalog-contract.md#versioning-and-requirements)).
 
-Nothing yet says what Anvil must be able to do before making that promise.
-The five gates below are a proposal, drawn from what Anvil says it is for.
-They stand until the maintainer confirms or changes them.
+**1.0 is for one organization: the one that builds Anvil.** Its platform team
+runs one server for its own engineers, on GitHub, GCP and Okta. Running
+anywhere, for anyone, comes after 1.0, and so does everything that only
+another organization would need.
 
-| Gate | Where it comes from |
+Five gates say what Anvil must do before making the promise. The maintainer
+confirmed them on 2026-11-14. Each closes on a test, not on a judgment.
+
+| Gate | Closed when |
 | --- | --- |
-| **1. No ticket for everyday work.** An engineer creates, runs, configures, observes and retires a service without asking the platform team. | "Ask it for a service by name and it gives you a repository, CI and somewhere to run it" ([What Anvil is](../README.md)) |
-| **2. The platform team can see and steer a change.** Before a catalog, settings or binding change reaches a service, they can see which services it affects and what it will do, and roll it out. | "Each request describes the state you want, and Anvil converges on it" ([How Anvil works](how-it-works.md#idempotency)) |
-| **3. The server is safe to depend on.** It survives losing a node, can be backed up and restored, and runs wherever the operator has a disk and a bucket. | The single-instance limit in [Decisions and known limitations](decisions.md#running-anvil) |
-| **4. What the docs describe has run for real.** Every documented workflow has run against the real identity provider and cloud, and engineers have used Anvil for real services. | [How Anvil is tested](testing.md) |
-| **5. The interfaces are worth keeping.** The catalog contract, HTTP API, CLI, server configuration and stored records are ones Anvil can keep compatible after 1.0. | [Releases and upgrades](releases.md#releases) |
+| **1. No ticket for everyday work.** An engineer creates, runs, configures, observes and retires a service without asking the platform team. | Every workflow in [gate 1's list](#gate-1-no-ticket-for-everyday-work) has a passing scenario in the [validation harness](../e2e/README.md), and during the pilot no developer needed an admin for anything on it. |
+| **2. The platform team can see and steer a change.** Before a catalog, settings or binding change reaches a service, they can see which services it affects and what it will do, and roll it out. | For each of the three kinds of change, a scenario lists the services affected, previews one and converges them all. |
+| **3. The server is safe to depend on.** Its records can be backed up, and a restore on a new machine brings back a working server. | A scenario restores a snapshot onto an empty server, which then applies a change to a service it didn't create. The restore steps are in the server guide. |
+| **4. What the docs describe has run for real.** Every documented workflow has run against the real identity provider and cloud, and engineers have used Anvil for real services. | Each item in [gate 4's list](#gate-4-what-the-docs-describe-has-run-for-real) has run, and the pilot has crossed one upgrade. |
+| **5. The interfaces are worth keeping.** The catalog contract, HTTP API, CLI, server configuration and stored records are ones Anvil can keep compatible after 1.0. | Every item in [gate 5's list](#gate-5-the-interfaces-are-worth-keeping) is decided, the compatibility policy is published, and an upgrade from the release candidate is tested. |
 
 ## Where Anvil is today
 
@@ -52,26 +56,41 @@ Each item's state is one of:
 - **Ready**: decided, and can be built.
 - **Decide**: needs a decision before it can be built.
 - **Verify**: built, and not yet run against the real thing.
-- **Untracked**: has no issue yet.
 
 ### Gate 1: no ticket for everyday work
 
 Today a service reaches "a URL serving my code" unaided. The next steps an
-engineer takes still go through the platform team.
+engineer takes still go through the platform team. This list is the whole of
+gate 1: a workflow that isn't on it doesn't hold up 1.0.
 
 | Gap | State | Issue |
 | --- | --- | --- |
 | Secrets and runtime configuration for a Cloud Run service | Ready | [#6](https://github.com/Laratechs/anvil/issues/6) |
 | Memory, CPU and scaling: changes made outside Anvil are reset at the next apply | Decide | [#43](https://github.com/Laratechs/anvil/issues/43) |
-| Extending the managed CI: edits are overwritten at the next apply | Decide | [#44](https://github.com/Laratechs/anvil/issues/44) |
-| Reading a service's own logs and metrics on the platform | Decide | [#45](https://github.com/Laratechs/anvil/issues/45) |
-| Links to a service's console, logs and CI | Decide | [#9](https://github.com/Laratechs/anvil/issues/9) |
+| Reading a service's own logs and metrics: developers sign in to the platform's project with Okta | Ready | [#45](https://github.com/Laratechs/anvil/issues/45) |
+| Links to a service's console, logs and CI, which open once #45 is set up | Decide | [#9](https://github.com/Laratechs/anvil/issues/9) |
+| Changing the CI workflow: teams own it after creation | Ready | [#77](https://github.com/Laratechs/anvil/issues/77) |
+| A warning when an apply overwrites a managed file the team changed | Decide | [#79](https://github.com/Laratechs/anvil/issues/79) |
 | Removing a deployment without deleting the service, which also lets its type change | Ready | [#7](https://github.com/Laratechs/anvil/issues/7) |
 | Bringing an existing repository under Anvil | Ready | [#10](https://github.com/Laratechs/anvil/issues/10) |
+| Work that doesn't fit a Cloud Run service: a scheduled job, a queue worker, a second deployment beside the first | Decide | [#80](https://github.com/Laratechs/anvil/issues/80) |
 
-[#45](https://github.com/Laratechs/anvil/issues/45) needs the most thought:
-it meets the decision that Anvil grants no access to people
-([Decisions](decisions.md#decisions)).
+Logs and metrics ([#45](https://github.com/Laratechs/anvil/issues/45)) are
+decided: the platform team grants the Okta developers group read access to
+the platform's project once, at setup, through Workforce Identity
+Federation. Anvil still grants no access to people
+([Decisions](decisions.md#decisions)), and every developer can read every
+service there.
+
+One needs the most thought:
+
+- [#80](https://github.com/Laratechs/anvil/issues/80) asks what the platform
+  rules out. It offers one kind of deployment, a container that answers HTTP
+  requests, and the only way out is a project of the service's own, which
+  starts empty and has no add-ons. The pilot should say which shapes real
+  services need before anything is built. One part can't wait for it:
+  whether a service may ever have more than one deployment shapes the stored
+  record, so it is decided before the freeze.
 
 ### Gate 2: the platform team can see and steer a change
 
@@ -84,14 +103,20 @@ its binding, and `migrate` moves it. Catalog and settings changes don't yet.
 | Preview what an apply would do: `anvil service plan` | Decide | [#47](https://github.com/Laratechs/anvil/issues/47) |
 | Settings changes don't reach running services, and nothing converges many services at once | Decide | [#46](https://github.com/Laratechs/anvil/issues/46) |
 | List a service's operations: who changed what, and when | Decide | [#8](https://github.com/Laratechs/anvil/issues/8) |
-| A failed apply waits for someone to repeat the request | Untracked | |
+| A failed apply waits for someone to repeat the request | Decide | [#81](https://github.com/Laratechs/anvil/issues/81) |
 
 ### Gate 3: the server is safe to depend on
 
 One server holds Anvil's records in files and its leases in memory. The plan
 is a store replicated by Raft inside `anvil server`
-([#62](https://github.com/Laratechs/anvil/issues/62)): one node or three, and
-nothing else to run. Every step is decided.
+([#62](https://github.com/Laratechs/anvil/issues/62)), with nothing else to
+run.
+
+1.0 needs that store on one node, with snapshot and restore. While the
+server is down nobody can change a service, but every service keeps running,
+so 1.0 doesn't wait for a second node. The store has to land before the
+freeze because 1.0 freezes the stored records. Clustering adds nodes without
+changing them, so it [follows 1.0](#after-10).
 
 | Gap | State | Issue |
 | --- | --- | --- |
@@ -100,21 +125,28 @@ nothing else to run. Every step is decided.
 | A request's records are written in one commit | Ready | [#70](https://github.com/Laratechs/anvil/issues/70) |
 | Finished operations age out | Ready | [#71](https://github.com/Laratechs/anvil/issues/71) |
 | Snapshot and restore | Ready | [#75](https://github.com/Laratechs/anvil/issues/75) |
-| Clustering: peer TLS, join and remove, leader-only work, status and readiness | Ready | [#72](https://github.com/Laratechs/anvil/issues/72), [#73](https://github.com/Laratechs/anvil/issues/73), [#74](https://github.com/Laratechs/anvil/issues/74), [#76](https://github.com/Laratechs/anvil/issues/76) |
-| Terraform state in S3-compatible storage as well as GCS | Decide | [#63](https://github.com/Laratechs/anvil/issues/63) |
-| Release artifacts: a release is a tag, installed with `go install` from a private repository. No binaries or container image are published | Untracked | |
-| The server's own metrics: it has a health check and logs only | Untracked | |
+| The server's own metrics: it has a health check and logs only | Decide | [#82](https://github.com/Laratechs/anvil/issues/82) |
+| A review of what the server holds and who can reach it: the GitHub App key, the cloud credentials, the data directory and the API | Ready | [#83](https://github.com/Laratechs/anvil/issues/83) |
+| How the pilot's server and CLI are installed: a release is a tag, installed with `go install` from a private repository | Decide | [#84](https://github.com/Laratechs/anvil/issues/84) |
 
 ### Gate 4: what the docs describe has run for real
 
-Three features are built and tested against fakes or mock providers only.
+Three features are built and tested against fakes or mock providers only,
+and nobody but the maintainer has used Anvil.
 
 | Gap | State | Issue |
 | --- | --- | --- |
 | Sign-in and roles against a real Okta authorization server | Verify | [#52](https://github.com/Laratechs/anvil/issues/52) |
 | Self-managed GCP projects: create, CI image push, force delete | Verify | [#41](https://github.com/Laratechs/anvil/issues/41) |
 | The PostgreSQL add-on on real Cloud SQL, including detaching while connections are open | Verify | [#42](https://github.com/Laratechs/anvil/issues/42) |
-| Real use: Anvil has no users yet. A pilot with real services, long enough to cross at least one upgrade | Untracked | |
+| A second person sets up their CLI and creates a service from the docs alone | Ready | [#85](https://github.com/Laratechs/anvil/issues/85) |
+| The pilot | Ready | [#86](https://github.com/Laratechs/anvil/issues/86) |
+
+**The pilot** is two developers, the maintainer and one other, running real
+services. They use Anvil together on shared services and each alone on their
+own, and stay on it across at least one upgrade. Whenever one of them has to
+ask an admin, leave Anvil or work around it, that becomes an issue. Those
+issues settle the Decide items in gates 1 and 2.
 
 ### Gate 5: the interfaces are worth keeping
 
@@ -122,35 +154,54 @@ Whatever ships in 1.0 stays. These are what would be frozen by accident.
 
 | Gap | State | Issue |
 | --- | --- | --- |
-| Names from before deployments: `spec.clouds`, `cloud_<name>` and a binding's `provider` still say cloud ([Glossary](../CONTEXT.md#names-from-before-deployments)). Rename them, or keep them for good | Untracked | |
-| MVP leftovers in the API: the deprecated top-level `description` and `error`, and `?wait=true` ([Compatibility notes](api.md#compatibility-notes)) | Untracked | |
-| Catalog contract 2 is still read, and the contract that 1.0 freezes isn't chosen | Untracked | |
-| Upgrade code for releases nobody runs: settings that moved to bindings, deployments from before bindings, services created with a team ([Older releases](releases.md#older-releases)) | Untracked | |
-| A compatibility policy for after 1.0: what may change in the API, CLI, configuration and stored records, how deprecations are announced, and which upgrade paths are tested | Untracked | |
+| Names from before deployments: `spec.clouds`, `cloud_<name>` and a binding's `provider` still say cloud ([Glossary](../CONTEXT.md#names-from-before-deployments)). Rename them, or keep them for good | Decide | [#87](https://github.com/Laratechs/anvil/issues/87) |
+| Whether a service may ever have more than one deployment. The record holds a list and the engine allows one | Decide | [#80](https://github.com/Laratechs/anvil/issues/80) |
+| MVP leftovers in the API: the deprecated top-level `description` and `error`, and `?wait=true` ([Compatibility notes](api.md#compatibility-notes)) | Ready | [#88](https://github.com/Laratechs/anvil/issues/88) |
+| Catalog contract 2 is still read, and the contract that 1.0 freezes isn't chosen | Decide | [#89](https://github.com/Laratechs/anvil/issues/89) |
+| Upgrade code for releases nobody runs: settings that moved to bindings, deployments from before bindings, services created with a team ([Older releases](releases.md#older-releases)) | Ready | [#90](https://github.com/Laratechs/anvil/issues/90) |
+| A compatibility policy for after 1.0: what may change in the API, CLI, configuration and stored records, how deprecations are announced, and which upgrade paths are tested | Decide | [#91](https://github.com/Laratechs/anvil/issues/91) |
 | Sender-constrained tokens (DPoP) change how every request is authorized, so decide before the freeze | Decide | [#57](https://github.com/Laratechs/anvil/issues/57) |
-| Machine callers: only people can sign in, so CI can't call Anvil | Untracked | |
+| Machine callers: only people can sign in, so CI can't call Anvil | Decide | [#92](https://github.com/Laratechs/anvil/issues/92) |
 
 ## A suggested order
 
 The gates don't have to close in order, and the store work depends on
-nothing else here. One order that keeps each release useful:
+nothing else here. The pilot starts early, because it is what settles the
+open decisions.
 
 1. **Prove what's built.** Run sign-in, self-managed projects and the
    PostgreSQL add-on for real, and correct the guides. This is checking, not
    building, and everything after it stands on these features.
-2. **Remove the tickets.** Secrets (#6) first, then sizing (#43), CI
-   extension (#44), logs (#45) and links (#9). Undeploy (#7) and import (#10)
-   follow.
-3. **Show what a change will do.** The catalog marker (#50), then plan (#47),
+2. **Unblock the pilot.** Secrets (#6), import (#10) for the services that
+   already exist, and team-owned CI (#77).
+3. **Start the pilot** on the current server. Record what it turns up
+   against sizing (#43), logs (#45), links (#9) and the limits of Cloud Run
+   (#80).
+4. **Remove the remaining tickets,** in the order the pilot asks for them.
+   Undeploy (#7) follows.
+5. **Show what a change will do.** The catalog marker (#50), then plan (#47),
    then settings and convergence (#46).
-4. **Replace the store.** Foundations, the single-node switch, then
-   clustering (#64 to #76). The operation list (#8) builds on it. This can
-   run alongside steps 2 and 3.
-5. **Start a pilot** once steps 1 and 2 are done, on a single node.
-6. **Freeze.** Settle the names, remove the leftovers, write the
+6. **Replace the store.** Foundations, the single-node switch, then snapshot
+   and restore (#64 to #71, #75). The operation list (#8) builds on it. This
+   can run alongside steps 2 to 5, and the pilot crosses it as an upgrade.
+7. **Freeze.** Settle the names, remove the leftovers, write the
    compatibility policy, and tag a release candidate.
 
-## Proposed as out of scope for 1.0
+## After 1.0
+
+Decided and deliberately later. None of it changes an interface 1.0 freezes.
+
+- **Clustering:** peer TLS, join and remove, leader-only work, status and
+  readiness ([#72](https://github.com/Laratechs/anvil/issues/72),
+  [#73](https://github.com/Laratechs/anvil/issues/73),
+  [#74](https://github.com/Laratechs/anvil/issues/74),
+  [#76](https://github.com/Laratechs/anvil/issues/76)). Until then a lost
+  node is restored from a snapshot.
+- **Running anywhere.** Terraform state in S3-compatible storage as well as
+  GCS ([#63](https://github.com/Laratechs/anvil/issues/63)), and published
+  binaries and a container image for other organizations.
+
+## Out of scope for 1.0
 
 Each is a documented limitation today
 ([Known limitations](decisions.md#known-limitations)). Saying so here keeps
@@ -165,3 +216,7 @@ them from becoming silent gaps; any can be pulled in.
 - **Identity providers other than Okta.**
 - **Credentials in the operating system's keychain.**
 - **Branch protection** on service repositories.
+- **Platform CI changes for existing services.** The CI workflow arrives
+  with the template and is the team's from then on, so a later improvement
+  reaches new services only
+  ([#78](https://github.com/Laratechs/anvil/issues/78)).
