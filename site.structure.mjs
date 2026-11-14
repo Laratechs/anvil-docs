@@ -81,6 +81,11 @@ export const groups = [
         label: 'Decisions and limitations',
         from: { source: 'anvil', file: 'docs/decisions.md' },
       },
+      {
+        slug: 'concepts/roadmap',
+        label: 'Roadmap to 1.0',
+        from: { source: 'anvil', file: 'docs/roadmap.md' },
+      },
     ],
   },
   {
