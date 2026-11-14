@@ -44,9 +44,10 @@ becomes the next one's baseline.
    environment variable and the setting that replaced it, an attribute the
    catalog no longer declares, or a version constraint that rules it out.
 4. **Existing services converge at their next apply.** They don't change on
-   their own. Each converges on the new release at its next apply, when its
-   request is repeated. A service last applied with another catalog revision
-   re-applies at the same generation
+   their own. Run `anvil service list` to see which services are outdated, then
+   `anvil service migrate -all` to converge them: it shows each one's plan and
+   asks you to confirm. A service last applied with another catalog revision
+   re-applies at the same generation, as does a repeated request
    ([How Anvil works](how-it-works.md#idempotency)).
 
 `TestUpgrade` in the [validation harness](../e2e/README.md) checks that this

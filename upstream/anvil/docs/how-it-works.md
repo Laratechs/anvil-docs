@@ -58,7 +58,9 @@ Each service has:
 
 Its `phase` (`provisioning`, `ready`, `archiving`, `archived`, `deleting` or
 `failed`) is derived from those. Every change is an **operation** (`queued`,
-`running`, `succeeded` or `failed`), kept as the service's change log.
+`running`, `succeeded` or `failed`), kept as the service's change log. Each
+records its kind (create, archive, deploy and so on), who asked, and how it
+went, and `anvil operation list` reads it back.
 
 ## Idempotency
 
@@ -70,14 +72,72 @@ is added, never removed by leaving it out.
 | Situation | Result |
 | --- | --- |
 | The service is `ready` and already has everything the request asks for | `200` with the service. Terraform doesn't run. |
-| The same, but the service was last applied with another catalog revision (`status.catalog_revision`), as after an upgrade | `202` with an operation that re-applies it at the same generation, so it converges on the current catalog. Its `changes` say what Terraform changed: all zero when the upgrade kept the service's resources as they were. |
+| The same, but the service was last applied with another catalog revision (`status.catalog_revision`), as after an upgrade, or with other settings (`status.settings_digest`, a digest of the settings its definitions read) | `202` with an operation that re-applies it at the same generation, so it converges on the current catalog and settings. Its `changes` say what Terraform changed: all zero when the upgrade kept the service's resources as they were. Until then `service list` and `service get` mark the service as outdated (`catalog_update` and `settings_update` in the API). A service applied before digests were recorded counts as outdated once. `anvil service migrate NAME` or `-all` does this for services that haven't had a request. |
 | The same request is already queued or running | `202` with that operation. Nothing is queued twice. |
 | A request that asks for more arrives while an apply runs (for example, it adds `-deploy`) | `202` with a new operation. It runs as soon as the current apply finishes. |
 | The last apply `failed`, or the server stopped mid-apply | Repeating the request re-applies, and Terraform resumes from its state. Interrupted work also resumes on its own when the server restarts. |
+| The last apply failed for a [transient](#retrying-transient-failures) reason, and the operation is `retrying` | Nothing to do: Anvil applies again at the time the operation shows. A request that changes something applies at once instead, and covers the retrying operation. |
 | A client retries with the same `Idempotency-Key` (the CLI sends one on every write) | The original operation, even after a force delete that would otherwise be a `404`. |
 
 A create for an existing name converges on it, whoever sends it: services have
 no owner, so there is no "someone else's name" conflict.
+
+## Retrying transient failures
+
+A rate limit or a flaky network shouldn't leave a service half-applied until
+someone notices. When an apply fails with an error Anvil can tell is
+temporary, it doesn't fail the operation. The operation becomes `retrying`,
+with the `attempt` that failed and `next_attempt_at`, and its `error` holds
+the last failure. The service stays reconciling, its `Ready` condition has the
+reason `Retrying`, and `anvil service get` shows the attempt and when the next
+one starts.
+
+Anvil recognizes these as transient, in Terraform's message: a rate limit
+(`429`, `rate limit`), a server error from GitHub or GCP (`Error 500`, `502`,
+`503`, `504`, `502 Bad Gateway`, `503 Service Unavailable`), and a network
+failure (`connection reset by peer`, `i/o timeout`, `TLS handshake timeout`,
+`unexpected EOF`, `no such host`). Anything else fails at once, as before.
+
+It retries three times, after 1, 4 and 16 minutes (an operator can change the
+waits with `ANVIL_RETRY_BACKOFF`, see [Running the server](server.md)). A
+failure after the last retry fails the operation, naming the attempts, and
+then waits for someone to repeat the request. Each retry applies from
+Terraform's state, as a repeated request does. A new request for the service
+doesn't wait out the backoff: it applies at once, and its apply covers the
+retrying operation too. A server that restarts while an operation is retrying
+carries on with it.
+
+An admin stops a retry with `anvil operation cancel <id>`. The operation fails
+with the last error and who cancelled it, and the service is left as the last
+attempt left it. Repeat the request to try again. Only a `retrying` operation
+can be cancelled: one that is running is applying, and Terraform isn't
+interrupted mid-apply.
+
+Retries cover applies of services. An add-on instance's apply fails as
+before and waits for a request.
+
+## Previewing a change
+
+`anvil service plan NAME` shows what an apply would change without applying
+it. It is an operation of kind `plan`, queued like any other, so it takes the
+service's turn: the service has one worker at a time, and the plan waits for
+an apply that is running, retrying or waiting for an add-on, then previews
+what that apply left. A plan queued behind other plans runs in the order
+asked.
+
+The worker renders the service's root module exactly as an apply would, with
+the server's catalog, its settings and each deployment's recorded binding
+revision, or with each at its latest for `-binding=latest`, as a migrate
+would. It runs `terraform plan` on the service's state without locking or
+writing it, then records the result on the operation as `plan`: the counts,
+every resource change, and the stateful resources the plan replaces or
+destroys, as the catalog declares them (`lifecycle { stateful }`).
+
+A plan changes nothing on the service: not its generation, conditions or last
+operation, and nothing is applied. It is never retried, not even for a
+failure an apply would retry: a plan that fails fails its operation with
+`planning failed: ...`, and asking again plans again. The next apply renders
+the root module again, so a plan leaves nothing it depends on.
 
 ## Archiving and deleting
 

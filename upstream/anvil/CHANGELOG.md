@@ -13,6 +13,63 @@ listed under **Breaking changes**.
 
 ### Added
 
+- **Settings reach running services, and `anvil service migrate -all`
+  converges every outdated one.** A service records a digest of the
+  settings its definitions read (`status.settings_digest`); when the
+  operator changes them, a repeated request re-applies the service at the
+  same generation, `service list` marks it `settings` in the `OUTDATED`
+  column, and the API body carries `settings_update`. A service applied
+  before this release converges once. The `OUTDATED` column also says
+  `binding` for a deployment behind its binding. `anvil service migrate`
+  now brings a service to the current catalog, settings and binding
+  revisions, and `-all` does it for every outdated service: it shows each
+  one's changes and plan, asks you to type the number of services
+  (`-confirm=N`), submits them together (the server's workers bound how
+  many run at once), reports each, and exits non-zero if any failed. This
+  loosens migrating bindings "one service at a time". **Migrate, one
+  service or all, now refuses a plan that replaces or destroys a stateful
+  resource unless you pass `-allow-replace`**; it only warned before
+  (#46).
+- **`anvil service plan NAME` previews what an apply would change.** It
+  runs Terraform's plan for the service as the server would apply it now,
+  with its catalog, settings and recorded bindings (`-binding=latest` moves
+  each deployment's binding to its latest revision, to preview a migrate),
+  and prints the counts, the resources behind them, and the stateful
+  resources that would be replaced or destroyed. `-json` prints every change.
+  It is a `plan` operation (`POST /v1/services/{name}/plan`), queued behind
+  the service's other work, never retried, and it records nothing on the
+  service. Developers and admins may run it. `anvil service migrate` now
+  shows the same plan before it asks you to confirm, and warns when it would
+  lose data in a stateful resource. `service get` points to it for a service
+  marked outdated (#47).
+- **`anvil service list` and `get` mark a service last applied with another
+  catalog revision.** The list has an `OUTDATED` column after `BINDING`
+  (`catalog`, or `-`), `service get` gives both revisions, and the API body
+  carries `catalog_update` (`applied` and `current`). Any request applies a
+  service on the server's catalog, so this shows who a new catalog tag hasn't
+  reached yet, and what a repeated `service create` would pick up. Archived
+  services and services never applied aren't marked (#50).
+- **`anvil operation list`** shows the operations that changed services,
+  newest first: for one service with `-service=NAME`
+  (`GET /v1/services/{name}/operations`), or for every service
+  (`GET /v1/operations`), filtered by `-state` and `-kind`, with cursor
+  pagination and `-json`. Operations now record a `kind` (`create`,
+  `import`, `update`, `restore`, `deploy`, `undeploy`, `migrate`,
+  `archive`, `delete`, `attach-addon`, `detach-addon`); earlier ones have
+  none. `anvil service get` shows the latest failed operation. Operations
+  of force-deleted services are not listed, and are kept forever until #71
+  ages them out (#8).
+- **Anvil retries an apply that failed for a transient reason** instead of
+  waiting for someone to repeat the request: a rate limit (429), a GitHub or
+  GCP 5xx, a network timeout or reset, or a DNS failure. It retries three
+  times, after 1, 4 and 16 minutes (`ANVIL_RETRY_BACKOFF`, or
+  `retry_backoff` in the configuration file, changes the waits; `none`
+  turns retries off). The operation has the new state `retrying`, with
+  `attempt` and `next_attempt_at`, and `anvil service get` shows
+  `Retrying`. Other failures fail at once, as before. An admin stops a retry
+  with **`anvil operation cancel ID`** (`POST /v1/operations/{id}/cancel`).
+  Add-on instances aren't retried (#81).
+
 - **`anvil service undeploy NAME`** removes a service's deployment and
   keeps the service and its repository (`DELETE
   /v1/services/{name}/deployment`). It deletes what a force delete would of

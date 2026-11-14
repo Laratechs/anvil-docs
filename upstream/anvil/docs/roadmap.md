@@ -94,16 +94,20 @@ One needs the most thought:
 
 ### Gate 2: the platform team can see and steer a change
 
-Bindings already work this way: `anvil service list` marks a service behind
-its binding, and `migrate` moves it. Catalog and settings changes don't yet.
+All three kinds of change now work this way: `anvil service list` marks a
+service whose catalog, settings or binding is outdated, `anvil service plan`
+previews what its next apply does, and `anvil service migrate -all`
+converges them. The validation harness has a scenario for each kind
+(`TestCatalogConverge`, `TestSettingsConverge`, `TestBindingConverge`)
+against the e2e catalog; none has run against a real cloud yet.
 
 | Gap | State | Issue |
 | --- | --- | --- |
-| Mark services last applied with an older catalog revision | Ready | [#50](https://github.com/Laratechs/anvil/issues/50) |
-| Preview what an apply would do: `anvil service plan` | Decide | [#47](https://github.com/Laratechs/anvil/issues/47) |
-| Settings changes don't reach running services, and nothing converges many services at once | Decide | [#46](https://github.com/Laratechs/anvil/issues/46) |
-| List a service's operations: who changed what, and when | Decide | [#8](https://github.com/Laratechs/anvil/issues/8) |
-| A failed apply waits for someone to repeat the request | Decide | [#81](https://github.com/Laratechs/anvil/issues/81) |
+| Mark services last applied with an older catalog revision | Verify | [#50](https://github.com/Laratechs/anvil/issues/50) |
+| Preview what an apply would do: `anvil service plan` | Verify | [#47](https://github.com/Laratechs/anvil/issues/47) |
+| Settings reach running services at their next apply, and `anvil service migrate -all` converges many services at once | Verify | [#46](https://github.com/Laratechs/anvil/issues/46) |
+| List a service's operations: `anvil operation list` (on the file store until #68) | Verify | [#8](https://github.com/Laratechs/anvil/issues/8) |
+| A transient failure is retried three times; `anvil operation cancel` stops it | Verify | [#81](https://github.com/Laratechs/anvil/issues/81) |
 
 ### Gate 3: the server is safe to depend on
 
@@ -179,10 +183,11 @@ open decisions.
    (#80).
 4. **Remove the remaining tickets,** in the order the pilot asks for them.
    Undeploy (#7) follows.
-5. **Show what a change will do.** The catalog marker (#50), then plan (#47),
-   then settings and convergence (#46).
+5. **Show what a change will do.** The catalog marker (#50), plan (#47),
+   settings and convergence (#46), the operation list (#8) and retries (#81)
+   are built; each still runs once against a real cloud.
 6. **Replace the store.** Foundations, the single-node switch, then snapshot
-   and restore (#64 to #71, #75). The operation list (#8) builds on it. This
+   and restore (#64 to #71, #75). The operation list (#8) moves onto it. This
    can run alongside steps 2 to 5, and the pilot crosses it as an upgrade.
 7. **Freeze.** Settle the names, remove the leftovers, write the
    compatibility policy, and tag a release candidate.

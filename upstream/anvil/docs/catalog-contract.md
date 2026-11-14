@@ -334,8 +334,8 @@ block takes no binding.
   so a binding update never re-applies running services. An existing
   cloud keeps its binding: naming another is a `409`.
 - An operator moves a service to its binding's latest revision with
-  `anvil service migrate`, one service at a time. It records the latest
-  revision and applies the service, so Terraform changes, or replaces,
+  `anvil service migrate NAME`, or `-all` for every outdated service. It
+  records the latest revision and applies the service, so Terraform changes, or replaces,
   whatever the new values touch. The latest revision must be valid. A
   service body lists the deployments that are behind under
   `binding_updates`.

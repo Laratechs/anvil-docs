@@ -128,8 +128,17 @@ Anvil is before 1.0, so some of these will change; the
   Terraform's state lock still guards against two servers applying at once. A
   shared store, with separate API and worker roles, is planned to remove this
   limit.
-- **No automatic retries.** A failed apply waits for someone to repeat the
-  request.
+- **Only transient failures are retried.** Anvil retries an apply that failed
+  for a reason it can tell is temporary: a rate limit (HTTP 429), a GitHub or
+  GCP server error (5xx), a network timeout or reset, or a DNS failure. It
+  makes up to three retries, after 1, 4 and 16 minutes, so four attempts in
+  all, and the operation records each one. Every other failure (a rejected
+  argument, a missing permission, a failed validation) and a transient one
+  that is still failing after the last retry stops, and waits for someone to
+  repeat the request. An admin can stop the retries with `anvil operation
+  cancel`. The list of transient errors is matched against Terraform's
+  message, so an error it doesn't know is not retried. Add-on instances
+  aren't retried: they wait for a request as before.
 - **Images outlive force-deleted services.** The GitHub App can't delete a
   service's ghcr.io image, and Anvil deliberately holds no other token that
   could. Until someone deletes it by hand (the delete's warning has the

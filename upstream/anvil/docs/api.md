@@ -48,6 +48,7 @@ takes is one of these requests.
 | `POST /v1/services/{name}/deployment` | `{"type"?,"deployment"?,"options"?,"binding"?}` | `200` if unchanged, `202` operation queued, `409` for another type or a second deployment |
 | `DELETE /v1/services/{name}/deployment?confirm={name}` | | `200` if the service has no deployment, `202` operation queued, `400` without `confirm`, `409` for an archived service or a deployment Anvil can't delete |
 | `POST /v1/services/{name}/migrate?confirm={name}` | | `200` if unchanged, `202` operation queued, `409` if the binding's latest revision isn't valid |
+| `POST /v1/services/{name}/plan[?binding=latest]` | | `202` `{"operation","service"}` for a `plan` operation (see [Plans](#plans)), `400` for another `binding` or for `wait`, `409` for an archived or never-applied service, or a latest binding revision that isn't valid |
 
 A service body has `spec`, `status` (with the derived `phase`) and
 `generation`. Status lives only under `status`: the repository and image in
@@ -151,8 +152,78 @@ running, makes progress or finishes. A running operation has:
 - while applying, `progress` (`done`, `total`, `current`), updated at most
   every 2 seconds.
 
+An apply that failed for a transient reason (a rate limit, a 5xx from GitHub
+or GCP, a network timeout) is `retrying`, which isn't a finished state: it has
+`attempt` (the attempts made), `next_attempt_at` and `error` (the last
+failure). The operation then ends `succeeded`, or `failed` once the retries run
+out, with `attempt` set. The service's `Ready` condition has the reason
+`Retrying` meanwhile. See [Retrying transient failures](how-it-works.md#retrying-transient-failures).
+
+`POST /v1/operations/{id}/cancel` stops a `retrying` operation and returns it,
+`failed`, with the last error and who cancelled it. It takes the admin
+[role](#roles). It answers `409` for an operation that is queued, running or
+finished, and `404` for one that doesn't exist.
+
 A succeeded apply has `changes` (`add`, `change`, `destroy`, `import`),
 Terraform's count of what it changed.
+
+`GET /v1/services/{name}/operations` lists a service's operations and
+`GET /v1/operations` lists every service's, newest first. Any signed-in user
+may read them.
+
+- Query: `state` (`queued`, `running`, `succeeded`, `failed`), `kind` (see
+  below), `before` (an operation ID: only older ones) and `limit` (1 to 200,
+  default 50; anything else is a `400`).
+- Body: `{"operations": [...], "next": "op_..."}`. `next` is present when more
+  remain: pass it as `before` for the next page.
+- The service's list is a `404` for a service that doesn't exist, including
+  one that was force deleted. The all-services list leaves out the operations
+  of force-deleted services and of add-on instances.
+- Operations are kept forever for now.
+
+An operation's `kind` says what the request did: `create` (a new service),
+`import` (a new service from an existing repository), `update` (a create on
+an active service), `restore` (a create on an archived one), `deploy`,
+`undeploy`, `migrate`, `archive`, `delete` (a force delete), `attach-addon`,
+`detach-addon` and `plan` (see [Plans](#plans)). It is absent from operations recorded before kinds
+existed.
+
+### Plans
+
+`POST /v1/services/{name}/plan` queues a `plan` operation: what applying the
+service would change now, with the server's catalog and settings and the
+binding revisions the service records, or with each deployment's binding at
+its latest revision for `?binding=latest`, which previews a migrate. It
+changes nothing, so it takes no `confirm`, and it honors an `Idempotency-Key`.
+It answers `202` with the operation; it takes no `wait`, since the service in
+that answer holds no plan. Read the operation with
+`GET /v1/operations/{id}?wait=DURATION`.
+
+When the operation succeeds it has `plan`:
+
+```json
+{
+  "catalog": "v0.4.0",
+  "bindings": {"gcp": 2},
+  "add": 2, "change": 1, "replace": 1, "destroy": 0,
+  "changes": [
+    {"address": "module.cloud_gcp.google_cloud_run_v2_service.this", "actions": ["update"]},
+    {"address": "module.cloud_gcp.google_artifact_registry_repository.images", "actions": ["delete", "create"], "stateful": true}
+  ],
+  "stateful_affected": [
+    {"address": "module.cloud_gcp.google_artifact_registry_repository.images", "actions": ["delete", "create"], "stateful": true}
+  ]
+}
+```
+
+`bindings` is the binding revision planned for each deployment, by
+deployment name. `changes` lists every resource the plan changes, with
+Terraform's `actions`: `create`, `update`, `delete`, or two of them for a
+replacement. `stateful_affected` is the changes that delete a resource the
+catalog declares stateful, to replace it or for good: the data in those is
+lost. A plan that fails fails its operation with `planning failed: ...` and
+is never retried. It changes nothing on the service: not its generation,
+conditions or `status.last_operation`.
 
 ## Cloud bindings
 
@@ -188,12 +259,26 @@ so updating a binding never re-applies existing deployments; deployments
 created afterwards get the new revision. An existing deployment keeps its
 binding: naming another one is a `409`.
 
+A service body also says when the service was last applied with another
+catalog revision than the server's, as `catalog_update`:
+`{"applied": "<revision>", "current": "<revision>"}`. It is absent for a
+service that is current, never applied, archived or deleted. The service's next
+apply moves it to the current catalog.
+
+It likewise says when the service was last applied with other settings than the
+server's, as `settings_update`: `{"applied": "<digest>", "current": "<digest>"}`,
+the first 12 characters of the digests of the settings its definitions read
+(`status.settings_digest` holds the whole digest of the last apply). `applied`
+is empty for a service applied before digests were recorded. It is absent under
+the same conditions as `catalog_update`.
+
 A service body lists the deployments that record an earlier revision than
 their binding's latest under `binding_updates`, each as
 `{"deployment", "binding", "revision", "latest"}`.
 `POST /v1/services/{name}/migrate?confirm={name}` records the latest revision
-for each and applies the service. With nothing to migrate it changes nothing,
-unless the last apply failed, which it retries. A latest revision the catalog
+for each and applies the service, which also brings it to the current catalog
+and settings. With nothing to migrate it changes nothing, unless the last apply
+failed, which it retries. A latest revision the catalog
 doesn't accept is a `409`.
 
 ## Catalog
@@ -238,14 +323,14 @@ Roles are organization-wide, and each includes the ones above it:
 | Role | Who | May |
 | --- | --- | --- |
 | viewer | anyone signed in | read services, operations, bindings, add-ons and the catalog |
-| developer | members of the developer group (`anvil-developers`) | also create, deploy, archive and restore services, and add or remove their add-ons |
-| admin | members of the admin group (`anvil-admins`) | also create, update and delete bindings, migrate services onto a binding's current values, and permanently delete services |
+| developer | members of the developer group (`anvil-developers`) | also create, deploy, archive and restore services, add or remove their add-ons, and preview what an apply would change (plan), which runs Terraform with the server's credentials |
+| admin | members of the admin group (`anvil-admins`) | also create, update and delete bindings, migrate services onto a binding's current values, cancel retrying operations, and permanently delete services |
 
 In routes: every `GET` takes a viewer. `POST /v1/services`,
-`POST /v1/services/{name}/deployment`, the add-on routes and
-`DELETE /v1/services/{name}` take a developer. `DELETE /v1/services/{name}`
-with `force=true`, `POST /v1/services/{name}/migrate` and the binding writes
-take an admin. The role is checked before the request is looked at, so a
+`POST /v1/services/{name}/deployment`, `POST /v1/services/{name}/plan`, the
+add-on routes and `DELETE /v1/services/{name}` take a developer. `DELETE /v1/services/{name}`
+with `force=true`, `POST /v1/services/{name}/migrate`,
+`POST /v1/operations/{id}/cancel` and the binding writes take an admin. The role is checked before the request is looked at, so a
 caller without it gets `403` whatever they sent. The group names are the
 server's `auth.developer_group` and `auth.admin_group`.
 
