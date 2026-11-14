@@ -8,6 +8,14 @@ listen   = ":8080"          # ANVIL_LISTEN, or -listen
 data_dir = "/var/lib/anvil" # .anvil; ANVIL_DATA_DIR, or -data-dir. Must persist.
 workers  = 4                # ANVIL_WORKERS: Terraform applies run at once
 
+# Serve https with this certificate and key (docs/server.md#serve-over-https).
+# Without this block the server serves plain http, so engineers can only sign
+# in from the same machine or through a proxy that terminates TLS.
+# tls {
+#   cert_file = "/secrets/anvil.crt" # ANVIL_TLS_CERT_FILE: PEM, the certificate then any intermediates
+#   key_file  = "/secrets/anvil.key" # ANVIL_TLS_KEY_FILE: PEM, a path, not the key
+# }
+
 github {
   organization = "Laratechs" # ANVIL_GITHUB_ORG
 

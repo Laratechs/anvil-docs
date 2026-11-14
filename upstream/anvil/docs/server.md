@@ -74,6 +74,30 @@ How the server reads configuration:
   the *path* to its key. The one secret-valued setting, `ANVIL_GITHUB_TOKEN`,
   is accepted only from the environment.
 
+## Serve over https
+
+The CLI sends sign-in credentials only over https, or over http to the same
+machine, so engineers can't sign in to a server on another machine that
+serves plain http. Either put a proxy or load balancer that terminates TLS
+in front of it, or give the server a certificate and key, and it serves https
+itself:
+
+```hcl
+tls {
+  cert_file = "/secrets/anvil.crt" # PEM: the certificate, then any intermediates
+  key_file  = "/secrets/anvil.key" # PEM: its private key; the file holds only the path
+}
+```
+
+The server reads both when it starts and refuses to start if either is
+missing or they don't match, so restart it after renewing the certificate.
+Engineers then use `https://` in `ANVIL_URL`.
+
+A certificate from an authority engineers' machines already trust needs
+nothing more. For one they don't, such as a self-signed certificate while
+trying Anvil out, the CLI refuses the server until told not to check it:
+`-tls-skip-verify`, or `ANVIL_TLS_SKIP_VERIFY=true` ([Using the CLI](cli.md#servers-with-a-self-signed-certificate)).
+
 ## Choose a catalog
 
 `catalog { source = "..." }` is required: a directory, or a Git source pinned
@@ -170,6 +194,8 @@ deployment, such as whether its Cloud Run service is public. The definition's
 | --- | --- | --- | --- | --- |
 | | `ANVIL_CONFIG` | `-config` | | The HCL configuration file |
 | `listen` | `ANVIL_LISTEN` | `-listen` | `:8080` | Listen address |
+| `tls.cert_file` | `ANVIL_TLS_CERT_FILE` | | | Path to the server's TLS certificate (PEM, followed by any intermediates). With `tls.key_file`, the server serves https instead of http ([Serve over https](#serve-over-https)) |
+| `tls.key_file` | `ANVIL_TLS_KEY_FILE` | | | Path to the certificate's private key (PEM). Needs `tls.cert_file` |
 | `data_dir` | `ANVIL_DATA_DIR` | `-data-dir` | `.anvil` | Service records, operations, tombstones, rendered Terraform and fetched catalog revisions. **Must be persistent.** MVP records are migrated as they are read. |
 | `workers` | `ANVIL_WORKERS` | | `4` | How many Terraform applies run at once |
 | `retry_backoff` | `ANVIL_RETRY_BACKOFF` | | `1m,4m,16m` | The waits before each retry of an apply that failed for a [transient reason](how-it-works.md#retrying-transient-failures), as comma-separated durations such as `1s,2s,3s`: their number is the number of retries. `0` or `none` turns retries off |

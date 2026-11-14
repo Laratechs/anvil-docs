@@ -24,6 +24,22 @@ From a checkout, `make install` builds the binary from your working tree into
 `~/.local/bin/anvil` (set `BINDIR` to put it elsewhere), stamped with
 `git describe` as its version. `make uninstall` removes it.
 
+### Servers with a self-signed certificate
+
+A server whose certificate isn't signed by an authority your machine trusts,
+such as a self-signed one, is refused with a certificate error. If you trust
+the server, tell the CLI not to check its certificate:
+
+```
+export ANVIL_TLS_SKIP_VERIFY=true   # or -tls-skip-verify on each command
+anvil login
+```
+
+Only the Anvil server goes unchecked: the identity provider and GitHub are
+still verified. Anyone between you and the server could read your
+credentials, so use it only on a network you trust, and prefer a certificate
+from a trusted authority for a server people rely on.
+
 ## Signing in
 
 ```

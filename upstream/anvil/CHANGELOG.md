@@ -13,6 +13,16 @@ listed under **Breaking changes**.
 
 ### Added
 
+- **The server can serve https, and the CLI can reach a server with a
+  self-signed certificate.** Give the server a certificate and key
+  (`tls { cert_file, key_file }`, or `ANVIL_TLS_CERT_FILE` and
+  `ANVIL_TLS_KEY_FILE`) and it serves https instead of http, so engineers
+  can sign in to it from their own machines. `-tls-skip-verify` (or
+  `ANVIL_TLS_SKIP_VERIFY=true`) has the CLI accept the Anvil server's
+  certificate without checking who signed it; the identity provider and
+  GitHub are still checked. A certificate the CLI refuses says so, and
+  names the flag.
+
 - **Settings reach running services, and `anvil service migrate -all`
   converges every outdated one.** A service records a digest of the
   settings its definitions read (`status.settings_digest`); when the
