@@ -24,6 +24,22 @@ From a checkout, `make install` builds the binary from your working tree into
 `~/.local/bin/anvil` (set `BINDIR` to put it elsewhere), stamped with
 `git describe` as its version. `make uninstall` removes it.
 
+### Servers with a self-signed certificate
+
+A server whose certificate isn't signed by an authority your machine trusts,
+such as a self-signed one, is refused with a certificate error. If you trust
+the server, tell the CLI not to check its certificate:
+
+```
+export ANVIL_TLS_SKIP_VERIFY=true   # or -tls-skip-verify on each command
+anvil login
+```
+
+Only the Anvil server goes unchecked: the identity provider and GitHub are
+still verified. Anyone between you and the server could read your
+credentials, so use it only on a network you trust, and prefer a certificate
+from a trusted authority for a server people rely on.
+
 ## Signing in
 
 ```
@@ -81,18 +97,50 @@ anvil service create -deploy orders    # also somewhere to run, on the platform
 a command whenever you like: it changes only what differs from what you asked
 for, and retries from where it stopped if the last attempt failed.
 
-Every change waits until it is done and shows its progress. Interrupting with
+Every change waits until it is done and shows its progress. When Anvil can
+tell a failure is temporary, such as a rate limit, it retries by itself, after
+1, 4 and 16 minutes at most, and keeps waiting: the progress line says
+`Retrying`, and `anvil service get` shows `retrying (attempt 2 of 4, next at
+...)`, which is the operation's attempt and next time, with the command that
+stops it. Interrupting with
 Ctrl-C stops the waiting, not the change. Pick it back up with
 `anvil operation wait <id>`, or skip the wait with `-wait=false`, which prints
 the operation instead.
+
+## Bring an existing repository under Anvil
+
+```
+anvil service import orders
+```
+
+A repository that predates Anvil can become a service with the same name.
+Anvil never adds application code: your code stays as it is. It first shows
+what it will change, and you confirm by typing the service name:
+
+- the files Anvil manages (lint configuration, and for now the CI workflow)
+  that the repository already has, which Anvil's versions replace, and the
+  ones it adds;
+- the repository settings it manages differently, such as visibility and
+  merge options, with their current and new values.
+
+The repository's description is one of those settings: without
+`-description` Anvil replaces it with a generated one, and the list shows it.
+Nothing changes before you confirm, and `-confirm=orders` skips the prompt
+in a script. Choose the template its kept-in-sync files come from with
+`-option template=python` when it isn't the default. Afterwards it is an
+ordinary service: give it somewhere to run with `anvil service deploy`.
+Deleting it with `-force` deletes the repository, as for any service. A
+catalog must say how to import ([the contract](catalog-contract.md#importing-an-existing-repository));
+without it the command says so.
 
 ## Give a service somewhere to run
 
 A **deployment** is where a service runs. It is **platform-managed** (the
 default: on the platform, the shared infrastructure the platform team runs) or
 **self-managed** (a cloud of the service's own, which you deploy into
-yourself). A service has at most one, and its type can't change, so choose
-before you deploy.
+yourself). A service has at most one, and its type can't change while it has
+one, so choose before you deploy. `anvil service undeploy` removes it
+([below](#remove-a-deployment)).
 
 ```
 anvil service deploy orders                          # on the platform
@@ -116,6 +164,21 @@ with or without a deployment
 each option to whichever declares it. For Cloud Run, see
 [Running services on Cloud Run](gcp.md).
 
+## Remove a deployment
+
+```
+anvil service undeploy orders    # keeps the service and its repository
+```
+
+This deletes the deployment's resources as `anvil service delete -force`
+does: a Cloud Run service with its images, the tenants of any add-ons
+attached to it with their data, and for a self-managed deployment the whole
+cloud, such as a project, with everything your team built in it. Anvil lists
+what goes, naming the resources that hold data, and asks you to type the
+service name. Afterwards the service has no deployment and can be deployed
+again, of either type. A service with no deployment is left as it is, and
+repeating the command after a failure retries it.
+
 ## Add a database
 
 An **add-on** is extra infrastructure on a platform-managed deployment, such
@@ -138,9 +201,85 @@ the service with `-force`, which names the data that goes.
 ```
 anvil service list
 anvil service get orders       # the service, its deployment, options and binding
+anvil operation get <id>       # one change: who asked, its state, and its error
 anvil version                  # client and server versions
 anvil catalog show             # what the server's catalog offers
 ```
+
+The OUTDATED column of `anvil service list` says what a service's next apply
+would pick up that it hasn't had yet: `catalog` means it was last applied with
+a different catalog revision than the server runs, as after the platform team
+moves to a new catalog tag, `settings` means it was last applied with other
+settings than the server has, as after the operator changes them, `binding`
+means a deployment is behind its binding's latest revision, and `-` means
+nothing. A service can be marked with more than one, comma-separated. Any
+request for the service applies it, including a repeated `anvil service create`
+that changes nothing, so a service marked `catalog` or `settings` can change
+when you run one. `anvil service get` says what it is behind on. Archived
+services and services never applied aren't marked.
+
+`anvil service migrate -all` brings every marked service up to date. It lists
+each one with what it is behind on and its plan, refuses to go on if a plan
+replaces or destroys a stateful resource (pass `-allow-replace` to accept
+losing its data), and asks you to type the number of services. The server
+applies them as workers are free, and the command reports each one and exits
+non-zero if any failed. `anvil service migrate NAME` does the same for one.
+It is for the platform team.
+
+`service get` also shows the service's latest failed operation, if it has
+one.
+
+## Preview a change
+
+```
+anvil service plan orders                  # what the next apply would change
+anvil service plan -binding=latest orders  # what migrating to the binding's latest revision would change
+anvil service plan -json orders            # every resource change, for scripts
+```
+
+`service plan` runs Terraform's plan for the service as the server would
+apply it now, with the server's current catalog and settings and the binding
+revisions the service records, and changes nothing. Use it before the next
+apply of a service marked `catalog` in `service list`, to see what a new
+catalog revision does to it, or to see what an option change replaces.
+
+It prints how many resources would be added, changed, replaced and destroyed,
+the resources behind those counts, and the stateful resources, those that
+hold data such as a database, that would be replaced or destroyed. The data in
+those is lost:
+
+```
+Plan for orders (catalog v0.4.0, gcp binding r2):
+  2 to add, 1 to change, 1 to replace, 0 to destroy
+  ~   module.cloud_gcp.google_cloud_run_v2_service.this
+  -/+ module.cloud_gcp.google_artifact_registry_repository.images
+Stateful resources replaced or destroyed: none
+```
+
+With nothing to change it says so. The plan waits behind the service's other
+work, shows in `anvil operation list` as kind `plan`, and records nothing on
+the service. A failed plan isn't retried: run it again. A service that is
+archived, or hasn't been applied yet, can't be planned. Developers and admins
+can run it; viewers can't, because it runs Terraform with the server's
+credentials.
+
+## See what changed
+
+```
+anvil operation list -service=orders     # a service's change log, newest first
+anvil operation list                     # every service's
+anvil operation list -state=failed -limit=5
+anvil operation list -kind=archive -json
+```
+
+Every change to a service is an operation, kept as its change log. The list
+shows each one's ID, kind (`create`, `import`, `update`, `restore`, `deploy`,
+`undeploy`, `migrate`, `archive`, `delete`, `attach-addon`,
+`detach-addon` or `plan`), service, state, who asked, when, and the first line of its
+error. It shows the 20 newest; `-limit` shows more. Operations are kept
+forever for now. The operations of a service deleted for good are not
+listed, and operations from before Anvil recorded kinds show `-` as their
+kind. `anvil operation get ID` shows one in full.
 
 ## Archive, restore and delete
 
@@ -167,7 +306,17 @@ anvil binding list
 anvil binding get -revision=1 gcp-shared
 anvil binding delete gcp-shared                            # refused while a deployment uses any revision
 anvil service list                                         # the BINDING column marks services behind their binding
+anvil service plan -binding=latest orders                  # preview that move first
 anvil service migrate orders                               # move one service to the binding's latest revision
+anvil service migrate -all                                 # every outdated service: plans first, then asks
+```
+
+To stop a change that is retrying a temporary failure, such as a rate limit
+that isn't going away, cancel its operation. It fails with its last error, and
+repeating the request tries again:
+
+```
+anvil operation cancel op_0193a8f2c1d04e7f9a1b2c3d4e5f6a7b
 ```
 
 To see what a catalog would build without a server, render it:

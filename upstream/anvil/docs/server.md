@@ -74,6 +74,30 @@ How the server reads configuration:
   the *path* to its key. The one secret-valued setting, `ANVIL_GITHUB_TOKEN`,
   is accepted only from the environment.
 
+## Serve over https
+
+The CLI sends sign-in credentials only over https, or over http to the same
+machine, so engineers can't sign in to a server on another machine that
+serves plain http. Either put a proxy or load balancer that terminates TLS
+in front of it, or give the server a certificate and key, and it serves https
+itself:
+
+```hcl
+tls {
+  cert_file = "/secrets/anvil.crt" # PEM: the certificate, then any intermediates
+  key_file  = "/secrets/anvil.key" # PEM: its private key; the file holds only the path
+}
+```
+
+The server reads both when it starts and refuses to start if either is
+missing or they don't match, so restart it after renewing the certificate.
+Engineers then use `https://` in `ANVIL_URL`.
+
+A certificate from an authority engineers' machines already trust needs
+nothing more. For one they don't, such as a self-signed certificate while
+trying Anvil out, the CLI refuses the server until told not to check it:
+`-tls-skip-verify`, or `ANVIL_TLS_SKIP_VERIFY=true` ([Using the CLI](cli.md#servers-with-a-self-signed-certificate)).
+
 ## Choose a catalog
 
 `catalog { source = "..." }` is required: a directory, or a Git source pinned
@@ -133,6 +157,13 @@ same settings keyed by definition (`{"cloud_gcp": {"public": false}}`). For a
 definition in both, the JSON file's entry replaces the block as a whole, with a
 warning.
 
+Settings apply to every service, but a running service picks up a change at its
+next apply, or when you run `anvil service migrate -all`. Anvil records a
+digest of the settings each service's definitions read, so after you change a
+setting and restart, `anvil service list` marks the services that still have
+the old value as outdated in `settings`. A setting of a deployment a service
+doesn't use doesn't mark it.
+
 ### Bindings
 
 A deployment lands where a **cloud binding** says, when its definition
@@ -163,8 +194,11 @@ deployment, such as whether its Cloud Run service is public. The definition's
 | --- | --- | --- | --- | --- |
 | | `ANVIL_CONFIG` | `-config` | | The HCL configuration file |
 | `listen` | `ANVIL_LISTEN` | `-listen` | `:8080` | Listen address |
+| `tls.cert_file` | `ANVIL_TLS_CERT_FILE` | | | Path to the server's TLS certificate (PEM, followed by any intermediates). With `tls.key_file`, the server serves https instead of http ([Serve over https](#serve-over-https)) |
+| `tls.key_file` | `ANVIL_TLS_KEY_FILE` | | | Path to the certificate's private key (PEM). Needs `tls.cert_file` |
 | `data_dir` | `ANVIL_DATA_DIR` | `-data-dir` | `.anvil` | Service records, operations, tombstones, rendered Terraform and fetched catalog revisions. **Must be persistent.** MVP records are migrated as they are read. |
 | `workers` | `ANVIL_WORKERS` | | `4` | How many Terraform applies run at once |
+| `retry_backoff` | `ANVIL_RETRY_BACKOFF` | | `1m,4m,16m` | The waits before each retry of an apply that failed for a [transient reason](how-it-works.md#retrying-transient-failures), as comma-separated durations such as `1s,2s,3s`: their number is the number of retries. `0` or `none` turns retries off |
 | `github.organization` | `ANVIL_GITHUB_ORG` | | `Laratechs` | Organization |
 | `github.app.id` | `ANVIL_GITHUB_APP_ID` | | | ID or client ID of the [GitHub App](github-app.md) that is Anvil's GitHub identity. Preferred for any deployed server |
 | `github.app.private_key_file` | `ANVIL_GITHUB_APP_PRIVATE_KEY_FILE` | | | Path to the App's private key (`.pem`) |
@@ -201,15 +235,15 @@ anvil service migrate orders       # shows what changes, and asks you to confirm
 `anvil service migrate` records the binding's latest revision on the service
 and applies it. Terraform changes what it can in place and replaces the rest,
 and the data in a replaced stateful resource is lost, so try a change on one
-service before the others. The command names the values that differ and the
-deployment's stateful resources before you confirm.
+service before the others. Before you confirm, the command names the values
+that differ and shows Terraform's plan for the move, warning when it replaces
+or destroys a stateful resource. `anvil service plan -binding=latest NAME`
+shows the same plan without migrating.
 
 Known limitations:
 
 - **One service at a time.** There is no command for every service; loop over
   the ones `anvil service list` marks.
-- **No plan preview.** The confirmation shows the binding's values, not
-  Terraform's plan.
 - **No way back by itself.** A failed migration leaves the service recording
   the new revision, in phase `failed`. Fix the cause and run the command
   again, or store the earlier values as a new revision and migrate to that.

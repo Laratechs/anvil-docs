@@ -5,11 +5,11 @@ Anvil is the Laratechs Internal Developer Platform: engineers ask it for service
 ## Language
 
 **Service**:
-A named, deployable unit of software that Anvil provisions and keeps in its desired state. It has exactly one repository, which belongs to no other service. A service has no owner; it belongs to the organization.
+A named, deployable unit of software that Anvil provisions and keeps in its desired state. It has exactly one repository, which belongs to no other service. A service has no owner; it belongs to the organization. A service is **imported** when its repository existed first: Anvil adopts it, never adds application code, and shows what it changes before it does.
 _Avoid_: App, project, owned service
 
 **Deployment**:
-Where a service runs, if anywhere. It is either **platform-managed**, on the platform, or **self-managed**, in the service's own cloud. A service has at most one, and its type can't change once chosen. A service without one can get either later.
+Where a service runs, if anywhere. It is either **platform-managed**, on the platform, or **self-managed**, in the service's own cloud. A service has at most one, and its type can't change while it is deployed. A service without one, including one that was undeployed, can get either.
 _Avoid_: Environment, cloud (for a platform-managed deployment)
 
 **Platform**:

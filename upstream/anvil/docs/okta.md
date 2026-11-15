@@ -131,6 +131,44 @@ $ anvil service list
 The server reads the issuer's metadata when it starts and refuses to start
 if it can't, so a wrong `auth.issuer` shows at once.
 
+## 7. Let developers into the Google Cloud console
+
+Optional. This is the Okta half of
+[developer access](gcp-setup.md#6-developer-access): Google federates the
+console sign-in to Okta, so developers read their services' logs with the
+account they already use. It is a second application, because Google's
+sign-in is a confidential web client and the CLI is a public one.
+
+**Applications → Create App Integration → OIDC → Web Application.**
+
+- **Name:** `Google Cloud console`
+- **Grant types:** **Authorization Code**, and **Implicit (hybrid)** with
+  **Allow ID Token with implicit grant type** checked. Google's guide for Okta
+  selects both.
+- **Sign-in redirect URI:**
+  `https://auth.cloud.google/signin-callback/locations/global/workforcePools/POOL/providers/okta`
+  (your pool ID, and the provider ID `okta` from the setup step)
+- **Assignments:** the `anvil-developers` group.
+
+Note its **Client ID** and **Client secret**: the workforce provider's
+`--client-id` and `--client-secret-value`. Unlike the CLI application, this
+one has a secret. It lives at Google; Anvil never sees it.
+
+Then make its ID token carry groups. On the `Anvil` authorization server:
+
+- **Claims → Add Claim:** name `groups`, include in **ID Token**, always;
+  value type **Groups**, filter **Starts with** `anvil-`.
+- **Access Policies:** add the `Google Cloud console` application to a
+  policy with a rule that allows the Authorization Code grant.
+
+The workforce provider's issuer is this server's issuer URI (step 1). A
+person's groups reach Google at their next console sign-in. The Anvil server
+isn't involved in this sign-in, and the setup step runs in Google's
+console, not Anvil's.
+
+This hasn't been run against a real Okta and organization yet
+([#45](https://github.com/Laratechs/anvil/issues/45)).
+
 ## Troubleshooting
 
 | Message | Cause |

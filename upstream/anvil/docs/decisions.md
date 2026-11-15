@@ -37,6 +37,13 @@ Anvil is before 1.0, so some of these will change; the
   its credentials in a file only the user can read, not in the operating
   system's keychain, and the access token is a bearer token: a copy works
   until it expires.
+- **Seeing a service:** the platform team grants the Okta developers group read
+  (`roles/run.viewer`, logging and monitoring viewer) on the shared project
+  once, through Workforce Identity Federation, so developers sign in to the
+  console with the same Okta sign-in as Anvil
+  ([#45](https://github.com/Laratechs/anvil/issues/45)). Anvil makes no
+  grant, so "Anvil grants no access to people" stands. Read is
+  organization-wide, as services have no owner. Anvil doesn't proxy logs.
 - **Naming:** 3–25 characters, lowercase letters, digits and single hyphens,
   starting with a letter. A few generic names are reserved.
 - **CI and registry:** GitHub Actions, with one shared registry
@@ -44,11 +51,14 @@ Anvil is before 1.0, so some of these will change; the
   Images are tagged `0.1.<run>`, `sha-<commit>` and `latest`, and carry a
   BuildKit SBOM and provenance record. Signed GitHub artifact attestations are
   left out because private repositories need GitHub Enterprise Cloud for them.
-- **Boilerplate updates:** managed files (CI, lint config) are re-applied from
+- **Boilerplate updates:** managed files (lint config) are re-applied from
   the catalog's templates on every apply, so platform changes reach existing
-  services. App code is seeded once and never overwritten.
+  services. App code and the CI workflow are seeded once and never
+  overwritten: the CI workflow is the team's after creation (#77).
 - **Where services run:** optional, and a service has one deployment whose type
-  can't change ([#36](https://github.com/Laratechs/anvil/issues/36)).
+  can't change while it is deployed ([#36](https://github.com/Laratechs/anvil/issues/36),
+  [#7](https://github.com/Laratechs/anvil/issues/7)): `anvil service undeploy`
+  removes it, and the service can then get either type.
   - **Platform-managed** (the default): a Cloud Run service per service, in one
     shared GCP project the platform team runs. Anvil provisions the slot and the
     identities. The service's CI pushes to its own Artifact Registry repository
@@ -77,6 +87,10 @@ Anvil is before 1.0, so some of these will change; the
 
 ### Using Anvil
 
+- **Read access is organization-wide.** Every developer can read every
+  platform-managed service, logs included, once the platform team has set up
+  [developer access](gcp-setup.md#6-developer-access). Anvil doesn't manage
+  it, and has no logs command.
 - **A deployment's type is fixed.** A service can't move between the platform
   and a cloud of its own.
 - **A service with its own cloud can't be archived.** An archive tears a
@@ -86,8 +100,10 @@ Anvil is before 1.0, so some of these will change; the
   AWS account is never deleted by Anvil.
 - **Cloud Run.** Services are public (anyone with the URL can call them) unless
   they choose `-option public=false` or the operator sets `cloud_gcp.public` to
-  `false`. Their runtime account starts with no roles, and settings other than
-  the image are Anvil's. See
+  `false`. Their runtime account reads only secrets named `<service>-*`,
+  whose values never pass through Anvil, and environment variables are
+  committed in the service's repository for CI to deploy; other settings
+  than the image and environment are Anvil's. See
   [Running services on Cloud Run](gcp.md#known-limitations) and
   [Cloud Run setup](gcp-setup.md#known-limitations).
 - **No branch protection.** Service repositories get no branch protection or
@@ -112,8 +128,17 @@ Anvil is before 1.0, so some of these will change; the
   Terraform's state lock still guards against two servers applying at once. A
   shared store, with separate API and worker roles, is planned to remove this
   limit.
-- **No automatic retries.** A failed apply waits for someone to repeat the
-  request.
+- **Only transient failures are retried.** Anvil retries an apply that failed
+  for a reason it can tell is temporary: a rate limit (HTTP 429), a GitHub or
+  GCP server error (5xx), a network timeout or reset, or a DNS failure. It
+  makes up to three retries, after 1, 4 and 16 minutes, so four attempts in
+  all, and the operation records each one. Every other failure (a rejected
+  argument, a missing permission, a failed validation) and a transient one
+  that is still failing after the last retry stops, and waits for someone to
+  repeat the request. An admin can stop the retries with `anvil operation
+  cancel`. The list of transient errors is matched against Terraform's
+  message, so an error it doesn't know is not retried. Add-on instances
+  aren't retried: they wait for a request as before.
 - **Images outlive force-deleted services.** The GitHub App can't delete a
   service's ghcr.io image, and Anvil deliberately holds no other token that
   could. Until someone deletes it by hand (the delete's warning has the
