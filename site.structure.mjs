@@ -176,6 +176,16 @@ export const groups = [
         from: { source: 'anvil', file: 'docs/catalog-contract.md' },
       },
       {
+        slug: 'catalogs/authoring',
+        label: 'Authoring guidance',
+        from: {
+          source: 'anvil',
+          file: 'docs/authoring.md',
+          description:
+            'Choices the contract leaves to catalog and template authors, starting with publishing only what something consumes.',
+        },
+      },
+      {
         label: 'Testing a catalog',
         link: 'concepts/testing/#testing-a-catalog',
       },
