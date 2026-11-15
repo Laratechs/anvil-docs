@@ -59,8 +59,9 @@ Add a rule to it:
 - **Grant type:** **Device Authorization** (refresh tokens follow from the
   `offline_access` scope).
 - **Scopes:** `openid`, `profile`, `offline_access`.
-- **Access token lifetime:** one hour or less. A shorter lifetime narrows
-  how long a copied token works; the CLI refreshes it without a prompt.
+- **Access token lifetime:** 5 minutes recommended; an hour at most. The
+  access token is a bearer token, so this is what limits how long a copy
+  works. The CLI refreshes it without a prompt.
 
 ## 4. Create the groups and the groups claim
 
@@ -166,8 +167,7 @@ person's groups reach Google at their next console sign-in. The Anvil server
 isn't involved in this sign-in, and the setup step runs in Google's
 console, not Anvil's.
 
-This hasn't been run against a real Okta and organization yet
-([#45](https://github.com/Laratechs/anvil/issues/45)).
+This hasn't been run against a real Okta and organization yet.
 
 ## Troubleshooting
 

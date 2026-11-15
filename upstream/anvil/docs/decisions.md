@@ -36,29 +36,34 @@ Anvil is before 1.0, so some of these will change; the
   then. Only people sign in: there are no machine callers yet. The CLI keeps
   its credentials in a file only the user can read, not in the operating
   system's keychain, and the access token is a bearer token: a copy works
-  until it expires.
+  until it expires, so the Okta access policy should keep that short (five
+  minutes). Tokens aren't bound to a key (DPoP): the key would sit beside
+  the token, so it wouldn't stop a copy taken from the engineer's disk.
 - **Seeing a service:** the platform team grants the Okta developers group read
   (`roles/run.viewer`, logging and monitoring viewer) on the shared project
   once, through Workforce Identity Federation, so developers sign in to the
   console with the same Okta sign-in as Anvil
-  ([#45](https://github.com/Laratechs/anvil/issues/45)). Anvil makes no
-  grant, so "Anvil grants no access to people" stands. Read is
-  organization-wide, as services have no owner. Anvil doesn't proxy logs.
+  ([Developer access](gcp-setup.md#6-developer-access)). Anvil itself
+  grants no access to people. Read is organization-wide, as services have no
+  owner. Anvil doesn't proxy logs.
 - **Naming:** 3–25 characters, lowercase letters, digits and single hyphens,
   starting with a letter. A few generic names are reserved.
-- **CI and registry:** GitHub Actions, with one shared registry
-  (`ghcr.io/<organization>/<service>`) and the short-lived `GITHUB_TOKEN`.
-  Images are tagged `0.1.<run>`, `sha-<commit>` and `latest`, and carry a
-  BuildKit SBOM and provenance record. Signed GitHub artifact attestations are
-  left out because private repositories need GitHub Enterprise Cloud for them.
+- **CI and registry:** GitHub Actions. A service's image is published only
+  to its own deployment's image repository, which Anvil removes with the
+  deployment; a service without a deployment publishes nothing. There is no
+  shared registry: nothing pulled from one, and nothing could delete its
+  packages ([#95](https://github.com/Laratechs/anvil/issues/95),
+  [Publish only what something consumes](authoring.md#publish-only-what-something-consumes)).
+  Images are tagged `0.1.<run>` and `sha-<commit>`, and carry a BuildKit
+  SBOM and provenance record. Signed GitHub artifact attestations are left
+  out because private repositories need GitHub Enterprise Cloud for them.
 - **Boilerplate updates:** managed files (lint config) are re-applied from
   the catalog's templates on every apply, so platform changes reach existing
   services. App code and the CI workflow are seeded once and never
-  overwritten: the CI workflow is the team's after creation (#77).
+  overwritten: the CI workflow is the team's after creation.
 - **Where services run:** optional, and a service has one deployment whose type
-  can't change while it is deployed ([#36](https://github.com/Laratechs/anvil/issues/36),
-  [#7](https://github.com/Laratechs/anvil/issues/7)): `anvil service undeploy`
-  removes it, and the service can then get either type.
+  can't change while it is deployed: `anvil service undeploy` removes it,
+  and the service can then get either type.
   - **Platform-managed** (the default): a Cloud Run service per service, in one
     shared GCP project the platform team runs. Anvil provisions the slot and the
     identities. The service's CI pushes to its own Artifact Registry repository
@@ -70,7 +75,8 @@ Anvil is before 1.0, so some of these will change; the
     and the CLI waits for it, so `anvil service create -deploy` ends with a URL
     serving the new repository's code.
 - **Add-ons:** extra infrastructure on a platform-managed deployment, the first
-  being a PostgreSQL database ([#42](https://github.com/Laratechs/anvil/issues/42)).
+  being a PostgreSQL database
+  ([The postgres add-on](gcp-setup.md#the-postgres-add-on)).
   - One instance per binding is shared, and each service gets a tenant of its
     own: a database and a role only its runtime identity can use, with no
     password.
@@ -115,11 +121,9 @@ Anvil is before 1.0, so some of these will change; the
   `-parallelism=1`. One of them, `.github/anvil-ci.env`, is there on purpose:
   Anvil commits it whenever it changes CI's Actions variables, so CI runs with
   them.
-- **Services created with a team.** Services provisioned before teams were
-  removed lose their team repository access, CODEOWNERS file, `anvil-team-*`
-  topic, and cloud team IAM bindings and labels on their next apply, because
-  the catalog no longer declares them. Regrant access by hand if needed. Their
-  stored records keep a `team` key, which Anvil ignores.
+- **Services from older releases.** Services created before teams were
+  removed, or while services were private by default, change on their next
+  apply; see [Older releases](releases.md#older-releases).
 
 ### Running Anvil
 
@@ -139,10 +143,13 @@ Anvil is before 1.0, so some of these will change; the
   cancel`. The list of transient errors is matched against Terraform's
   message, so an error it doesn't know is not retried. Add-on instances
   aren't retried: they wait for a request as before.
-- **Images outlive force-deleted services.** The GitHub App can't delete a
-  service's ghcr.io image, and Anvil deliberately holds no other token that
-  could. Until someone deletes it by hand (the delete's warning has the
-  command), a new service with the same name can't publish or deploy.
+- **ghcr.io images outlive force-deleted services.** The templates no longer
+  publish to ghcr.io, but a service created before that change (its CI is
+  its team's) or a catalog whose template still does leaves a package
+  behind. The GitHub App can't delete it, and Anvil deliberately holds no
+  other token that could. Until someone deletes it by hand (the delete's
+  warning has the command), a new service with the same name can't publish
+  there.
 - **Anvil reaches add-on instances over the network.** A tenant's database and
   role are created over a SQL connection from the Anvil server, because the
   provider's API alone can't keep one tenant out of another's database. The
@@ -156,7 +163,7 @@ Anvil is before 1.0, so some of these will change; the
 
 ### Building a catalog
 
-- **Catalog contract 2 is still read.** Contract 3 adds add-ons; the pinned
-  catalog moves to it with the add-on's release, and contract 2 goes after
-  that. The contract's own limits are in
+- **Catalog contract 2 is still read.** Contract 3 adds add-ons, and
+  contract 2 will stop being read in a later release, so move catalogs to
+  contract 3. The contract's own limits are in
   [the catalog contract](catalog-contract.md#known-limitations).

@@ -82,10 +82,13 @@ runs when `ANVIL_GCP_SERVICE` is set: it deploys that digest with
 `gcloud run deploy`, and puts the URL in the run's summary. A service
 with a project of its own gets `push` only
 ([Self-managed projects](gcp-setup.md#self-managed-projects)). The image
-is built once, by the `build` job, and kept as a run artifact: `publish`
-pushes it to ghcr.io (with its SBOM and provenance) and `push` copies its
-linux/amd64 manifest, so Cloud Run runs the same digest. Services without
-a deployment skip both.
+is built once, by the `build` job, and kept as a run artifact: `push`
+copies it, with its SBOM and provenance, to the service's own Artifact
+Registry repository, and `deploy` runs its linux/amd64 image by digest.
+That repository is the only place CI publishes the image, and it goes
+with the deployment. A service without a deployment publishes nothing:
+its build is the check
+([Publish only what something consumes](authoring.md#publish-only-what-something-consumes)).
 
 Variables alone don't start CI, so Anvil's `github-repository` component
 commits `.github/anvil-ci.env` after setting them (and after the managed
@@ -140,9 +143,8 @@ sign in at the link the platform team gives them, with the same Okta account
 as `anvil login`.
 
 Read is organization-wide: every developer can read every platform-managed
-service, logs included, which matches services having no owner. It is read
-only: changing a service is a CI deploy, and going back is
-[Rolling back](#rolling-back). A service with a project of its own is
+service, logs included. It is read only: changing a service is a CI
+deploy, and going back is [Rolling back](#rolling-back). A service with a project of its own is
 managed by its team, who set their own access.
 
 ## Rolling back
@@ -167,11 +169,8 @@ Artifact Registry repository.
 
 ## Known limitations
 
-- **Public became the default.** Services created while the default was
-  private turn public on their next apply, unless they set
-  `-option public=false` or the operator sets `cloud_gcp.public` to
-  `false`. Private means "needs an identity token"; Anvil grants
-  `roles/run.invoker` to no one, so granting callers is by hand.
+- **Granting callers is by hand.** A private service needs an identity
+  token to call, and Anvil grants `roles/run.invoker` to no one.
 - **Following CI needs read access.** The CLI reads the repository's
   Actions runs with your GitHub token. If it can't (or Actions is
   disabled), the command fails after Anvil's change succeeded; CI still
@@ -179,7 +178,6 @@ Artifact Registry repository.
 - **CI owns the image and the environment.** Terraform ignores the image,
   revision and environment fields so it doesn't roll back deploys, but
   resets other settings (scaling, memory) to Anvil's on the next apply.
-  Settings a service can choose are future work.
 - **Secret names are the boundary.** `run-<service>` reads every secret
   named `<service>-*`, so a service whose name is the start of another's
   (`orders` and `orders-eu`) can read that service's secrets. Avoid such

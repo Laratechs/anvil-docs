@@ -13,6 +13,14 @@ listed under **Breaking changes**.
 
 ### Added
 
+- **Guidance for catalog and template authors** ([docs/authoring.md](docs/authoring.md)):
+  publish an artifact only when something consumes it and the platform can
+  delete it, and say so in the docs. The templates now follow it: a
+  service's image goes, with its SBOM and provenance, only to its
+  deployment's own image repository, and a service without a deployment
+  publishes nothing. New services no longer get a ghcr.io package
+  ([#95](https://github.com/Laratechs/anvil/issues/95)).
+
 - **The server can serve https, and the CLI can reach a server with a
   self-signed certificate.** Give the server a certificate and key
   (`tls { cert_file, key_file }`, or `ANVIL_TLS_CERT_FILE` and

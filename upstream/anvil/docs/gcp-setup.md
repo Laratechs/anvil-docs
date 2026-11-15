@@ -63,9 +63,6 @@ identity needs, on the shared project:
 | `roles/iam.serviceAccountUser` | Set a service's runtime account on its Cloud Run service |
 | `roles/resourcemanager.projectIamAdmin` | Let each service's runtime account read the secrets named `<service>-*` (a conditional grant), and no others. The Secret Manager API must be enabled; Anvil never reads or writes a secret |
 
-Services created before secrets were supported get the grant on their next
-apply, which fails without that role.
-
 ```
 ANVIL=serviceAccount:anvil@ops-project.iam.gserviceaccount.com   # or user:you@example.com for a dev server
 for role in run.admin artifactregistry.admin iam.serviceAccountAdmin iam.serviceAccountUser resourcemanager.projectIamAdmin; do
@@ -130,9 +127,8 @@ Anvil grants no access to people. Without this step, the engineer who owns
 an incident. This step is the platform team's grant: developers sign in to
 the Google Cloud console with the same Okta sign-in as `anvil login`, and
 read every platform-managed service in the shared project. Read is
-project-wide because services have no owner and logs can't be scoped to
-one service at the project level
-([Decisions](decisions.md#decisions)). Developers can't change anything:
+project-wide because logs can't be scoped to one service at the project
+level. Developers can't change anything:
 rolling back is a re-run of CI ([Rolling back](gcp.md#rolling-back)).
 
 It uses [Workforce Identity Federation](https://docs.cloud.google.com/iam/docs/workforce-identities):
@@ -286,8 +282,7 @@ couldn't bring the team's work back.
 
 This definition has been tested with mock providers only, and the
 template's `push` job hasn't run on GitHub; apply it to a test folder
-before offering it
-([#41](https://github.com/Laratechs/anvil/issues/41)).
+before offering it.
 
 ## The postgres add-on
 
@@ -346,8 +341,7 @@ or retry the request once they're gone. Archiving a service with the
 add-on is refused. The instance has backups, which go with it.
 
 This definition has been tested with mock providers only; apply it in a
-test project before offering it
-([#42](https://github.com/Laratechs/anvil/issues/42)).
+test project before offering it.
 
 ## Known limitations
 
@@ -359,8 +353,6 @@ test project before offering it
 - **Shared quota and blast radius.** Every service shares the project's
   quotas and its project-level IAM. Anyone with project-wide Run or
   Artifact Registry roles can change any service.
-- **Per-service projects from October 2026.** Early catalogs gave every
-  service its own project, with more in it than today's
-  [self-managed projects](#self-managed-projects). A service created that way fails its next apply (its
-  project is protected from destroy); remove the old project from its
-  Terraform state by hand, or archive it.
+- **Services from older releases.** Upgrading from a release that gave every
+  service its own project, or from one without secrets? See
+  [Older releases](releases.md#older-releases).

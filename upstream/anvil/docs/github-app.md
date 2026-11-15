@@ -63,9 +63,13 @@ Grant exactly these and leave everything else at **No access**:
 | Repository → **Variables** | Read and write | Set Actions variables such as `ANVIL_IMAGE` and cloud exports |
 | Repository → **Metadata** | Read-only | Required by GitHub for every App; also lets Anvil check whether a repository name is taken |
 
-**Packages: none, by design.** A service's image (`ghcr.io/<org>/<service>`)
+**Packages: none, by design.** The templates' CI publishes nothing to
+ghcr.io ([Publish only what something consumes](authoring.md#publish-only-what-something-consumes)),
+but a service whose CI does (one created before that change, or from a
+catalog's own template) leaves an image (`ghcr.io/<org>/<service>`) that
 outlives its repository, and while it exists a new service with the same
-name can't publish (the package still belongs to the deleted repository).
+name can't publish there (the package still belongs to the deleted
+repository).
 The App can't delete it: GitHub has no App permission for packages, and
 answers an installation token with `404`. Anvil doesn't hold another
 token for this, because a long-lived classic token with `delete:packages`

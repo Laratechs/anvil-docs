@@ -17,8 +17,8 @@ runs one server for its own engineers, on GitHub, GCP and Okta. Running
 anywhere, for anyone, comes after 1.0, and so does everything that only
 another organization would need.
 
-Five gates say what Anvil must do before making the promise. The maintainer
-confirmed them on 2026-11-14. Each closes on a test, not on a judgment.
+Five gates say what Anvil must do before making the promise. Each closes on
+a test, not on a judgment.
 
 | Gate | Closed when |
 | --- | --- |
@@ -69,18 +69,15 @@ gate 1: a workflow that isn't on it doesn't hold up 1.0.
 | Memory, CPU and scaling: changes made outside Anvil are reset at the next apply | Decide | [#43](https://github.com/Laratechs/anvil/issues/43) |
 | Reading a service's own logs and metrics: developers sign in to the platform's project with Okta | Verify | [#45](https://github.com/Laratechs/anvil/issues/45) |
 | Links to a service's console, logs and CI, which open once #45 is set up | Decide | [#9](https://github.com/Laratechs/anvil/issues/9) |
-| Changing the CI workflow: teams own it after creation | Verify | [#77](https://github.com/Laratechs/anvil/issues/77) |
 | A warning when an apply overwrites a managed file the team changed | Decide | [#79](https://github.com/Laratechs/anvil/issues/79) |
 | Removing a deployment without deleting the service, which also lets its type change | Verify | [#7](https://github.com/Laratechs/anvil/issues/7) |
-| Bringing an existing repository under Anvil: built without the CI choice, which waits for #77 | Verify | [#10](https://github.com/Laratechs/anvil/issues/10) |
+| Bringing an existing repository under Anvil: built; whether Anvil's CI replaces the repository's own is still open | Verify | [#10](https://github.com/Laratechs/anvil/issues/10) |
 | Work that doesn't fit a Cloud Run service: a scheduled job, a queue worker, a second deployment beside the first | Decide | [#80](https://github.com/Laratechs/anvil/issues/80) |
 
-Logs and metrics ([#45](https://github.com/Laratechs/anvil/issues/45)) are
-decided: the platform team grants the Okta developers group read access to
-the platform's project once, at setup, through Workforce Identity
-Federation. Anvil still grants no access to people
-([Decisions](decisions.md#decisions)), and every developer can read every
-service there.
+For logs and metrics, the platform team grants the Okta developers group
+read access to the platform's project once, at setup
+([Developer access](gcp-setup.md#6-developer-access)), so every developer
+can read every service there.
 
 One needs the most thought:
 
@@ -164,7 +161,7 @@ Whatever ships in 1.0 stays. These are what would be frozen by accident.
 | Catalog contract 2 is still read, and the contract that 1.0 freezes isn't chosen | Decide | [#89](https://github.com/Laratechs/anvil/issues/89) |
 | Upgrade code for releases nobody runs: settings that moved to bindings, deployments from before bindings, services created with a team ([Older releases](releases.md#older-releases)) | Ready | [#90](https://github.com/Laratechs/anvil/issues/90) |
 | A compatibility policy for after 1.0: what may change in the API, CLI, configuration and stored records, how deprecations are announced, and which upgrade paths are tested | Decide | [#91](https://github.com/Laratechs/anvil/issues/91) |
-| Sender-constrained tokens (DPoP) change how every request is authorized, so decide before the freeze | Decide | [#57](https://github.com/Laratechs/anvil/issues/57) |
+| Sender-constrained tokens (DPoP): deferred, because a key beside the token adds little over a five-minute access token and `Bearer` can later accept `DPoP` beside it | Decided | [#57](https://github.com/Laratechs/anvil/issues/57) |
 | Machine callers: only people can sign in, so CI can't call Anvil | Decide | [#92](https://github.com/Laratechs/anvil/issues/92) |
 
 ## A suggested order
@@ -177,7 +174,7 @@ open decisions.
    PostgreSQL add-on for real, and correct the guides. This is checking, not
    building, and everything after it stands on these features.
 2. **Unblock the pilot.** Secrets (#6, verified), import (#10) for the services that
-   already exist, and team-owned CI (#77).
+   already exist, and team-owned CI (#77, verified).
 3. **Start the pilot** on the current server. Record what it turns up
    against sizing (#43), logs (#45), links (#9) and the limits of Cloud Run
    (#80).
@@ -205,6 +202,10 @@ Decided and deliberately later. None of it changes an interface 1.0 freezes.
 - **Running anywhere.** Terraform state in S3-compatible storage as well as
   GCS ([#63](https://github.com/Laratechs/anvil/issues/63)), and published
   binaries and a container image for other organizations.
+- **Sender-constrained tokens (DPoP).** Worth building once the key can live
+  somewhere the token doesn't (the keychain or a hardware key) or machine
+  callers arrive ([#57](https://github.com/Laratechs/anvil/issues/57)). Until
+  then the Okta access policy keeps the access token to five minutes.
 
 ## Out of scope for 1.0
 

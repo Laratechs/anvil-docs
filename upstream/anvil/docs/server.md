@@ -196,7 +196,11 @@ deployment, such as whether its Cloud Run service is public. The definition's
 | `listen` | `ANVIL_LISTEN` | `-listen` | `:8080` | Listen address |
 | `tls.cert_file` | `ANVIL_TLS_CERT_FILE` | | | Path to the server's TLS certificate (PEM, followed by any intermediates). With `tls.key_file`, the server serves https instead of http ([Serve over https](#serve-over-https)) |
 | `tls.key_file` | `ANVIL_TLS_KEY_FILE` | | | Path to the certificate's private key (PEM). Needs `tls.cert_file` |
-| `data_dir` | `ANVIL_DATA_DIR` | `-data-dir` | `.anvil` | Service records, operations, tombstones, rendered Terraform and fetched catalog revisions. **Must be persistent.** MVP records are migrated as they are read. |
+<<<<<<< HEAD
+| `data_dir` | `ANVIL_DATA_DIR` | `-data-dir` | `.anvil` | Service records, operations, tombstones, rendered Terraform and fetched catalog revisions. **Must be persistent.** The only path the server writes (with the system temp directory): Terraform and git run with `HOME`, the XDG directories, `TF_CLI_CONFIG_FILE` and `GIT_CONFIG_GLOBAL` under its `home/`, so the server's account needs no home directory, and an operator's `~/.terraformrc` or `~/.gitconfig` doesn't apply. Put CLI configuration Terraform should read, such as a provider mirror, in `home/.terraformrc`. Records from v0.1.0 are migrated as they are read. |
+=======
+| `data_dir` | `ANVIL_DATA_DIR` | `-data-dir` | `.anvil` | Service records, operations, tombstones, rendered Terraform and fetched catalog revisions. **Must be persistent.** Records from v0.1.0 are migrated as they are read. |
+>>>>>>> worktree-docs-off-topic-wording
 | `workers` | `ANVIL_WORKERS` | | `4` | How many Terraform applies run at once |
 | `retry_backoff` | `ANVIL_RETRY_BACKOFF` | | `1m,4m,16m` | The waits before each retry of an apply that failed for a [transient reason](how-it-works.md#retrying-transient-failures), as comma-separated durations such as `1s,2s,3s`: their number is the number of retries. `0` or `none` turns retries off |
 | `github.organization` | `ANVIL_GITHUB_ORG` | | `Laratechs` | Organization |
@@ -275,6 +279,16 @@ fetch the catalog and `git::` modules, and in Terraform's GitHub provider
   Account User on the shared project ([Cloud Run setup](gcp-setup.md)).
 - **AWS:** credentials in the Organizations management account (or a
   delegated administrator) allowed to create accounts.
+
+Terraform's home is under `data_dir`, not the account's, so name credential
+files with `GOOGLE_APPLICATION_CREDENTIALS`, `AWS_SHARED_CREDENTIALS_FILE` and
+`AWS_CONFIG_FILE`, or use the platform's metadata server. For a dev server,
+when those are unset and the account's home has the usual files
+(`~/.config/gcloud/application_default_credentials.json` from
+`gcloud auth application-default login`, `~/.aws/credentials`,
+`~/.aws/config`), the server names them for Terraform and logs that it did.
+It only reads them. AWS SSO sign-ins, whose token cache is found through the
+home directory, aren't carried over: use a credentials file.
 
 Requesters never get these credentials, and Anvil never gets theirs: a
 requester sends an access token their identity provider minted for Anvil,

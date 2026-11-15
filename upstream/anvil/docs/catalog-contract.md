@@ -9,10 +9,7 @@ This document describes contract 3, which adds [add-ons](#add-ons-contract-3)
 to contract 2. Anvil reads both, and a contract 2 catalog is a contract 3
 catalog without add-ons. The contract is provisional until Anvil 1.0: it may
 still break during v0.x, and every break is listed under **Breaking catalog
-changes** in the [changelog](../CHANGELOG.md). The decisions behind it are
-recorded in [#11](https://github.com/Laratechs/anvil/issues/11),
-[#36](https://github.com/Laratechs/anvil/issues/36) and their sub-issues, and
-for add-ons in [#42](https://github.com/Laratechs/anvil/issues/42).
+changes** in the [changelog](../CHANGELOG.md).
 
 This document describes what Anvil implements. Where it and the code disagree,
 the code is right and this document is a bug.
@@ -75,6 +72,7 @@ deleted. To check a catalog as you write it, render it without a server with
 | Control what survives an archive or delete | [Exports, archive and delete](#exports-archive-and-delete) |
 | Offer a database or other shared infrastructure | [Add-ons](#add-ons-contract-3) |
 | Move a catalog to a newer contract | [Moving to contract 3](#moving-to-contract-3), [Moving from contract 1](#moving-from-contract-1) |
+| Decide what a template's CI publishes, and where | [Guidance for catalog and template authors](authoring.md) |
 
 **Deployments and clouds.** A catalog declares where a service runs with
 `deployment` blocks. A deployment is either platform-managed, on the shared
@@ -758,9 +756,7 @@ address, so existing services re-apply with no Terraform changes.
   default. If the default changes first, the service records the new
   one.
 
-Contract 2 knowingly couples Anvil to GitHub and to its server environment.
-[#33](https://github.com/Laratechs/anvil/issues/33) tracks each limitation
-and possible solutions.
+Contract 2 knowingly couples Anvil to GitHub and to its server environment:
 
 - **GitHub.** Anvil assumes the service is a GitHub repository in
   `anvil.org` and that CI is GitHub Actions: the CLI follows CI on GitHub,

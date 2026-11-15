@@ -340,8 +340,9 @@ server's `auth.developer_group` and `auth.admin_group`.
 
 ## Compatibility notes
 
-- A service body's top-level `description` and `error`, from the MVP, are
+- A service body's top-level `description` and `error`, from v0.1.0, are
   still included and deprecated. Read `spec` and `status` instead.
-- `?wait=true` on a write keeps the MVP's synchronous behavior.
+- `?wait=true` on a write keeps v0.1.0's synchronous behavior: the request
+  returns when the apply finishes.
 - Deployments created before bindings were recorded are migrated when the
   server starts; see [Releases and upgrades](releases.md#deployments-created-before-bindings).

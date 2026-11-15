@@ -76,7 +76,7 @@ the organization **Members** permission.
 
 ### Removed configuration
 
-The MVP's `ANVIL_REGISTRY`, `ANVIL_REPO_VISIBILITY` and `ANVIL_AWS_*`
+v0.1.0's `ANVIL_REGISTRY`, `ANVIL_REPO_VISIBILITY` and `ANVIL_AWS_*`
 variables are no longer read. The server refuses to start while one is set, and
 names the setting that replaces it:
 
@@ -118,6 +118,35 @@ It then logs a warning naming the file and line, asking you to remove the
 attributes, which it ignores from then on. With no existing gcp deployments it
 makes no binding, and the warning gives the `anvil binding create` command that
 holds the same values instead.
+
+### Services created with a team
+
+Teams were removed. A service provisioned with a team loses its team
+repository access, CODEOWNERS file, `anvil-team-*` topic, and cloud team IAM
+bindings and labels on its next apply, because the catalog no longer declares
+them. Regrant access by hand if needed. Its stored record keeps a `team` key,
+which Anvil ignores.
+
+### Cloud Run services became public by default
+
+Services created while the default was private turn public on their next
+apply, unless they set `-option public=false` or the operator sets
+`cloud_gcp.public` to `false`
+([Public or private services](gcp-setup.md#public-or-private-services)).
+
+### Secrets for Cloud Run services
+
+Services created before secrets were supported get their runtime account's
+secret grant on their next apply, which fails until Anvil's GCP identity has
+`roles/resourcemanager.projectIamAdmin` on the shared project
+([Anvil's GCP identity](gcp-setup.md#3-anvils-gcp-identity)).
+
+### A project for every service
+
+Early catalogs gave every service its own GCP project, with more in it than
+today's [self-managed projects](gcp-setup.md#self-managed-projects). A service
+created that way fails its next apply (its project is protected from destroy);
+remove the old project from its Terraform state by hand, or archive it.
 
 ### Deployments created before bindings
 

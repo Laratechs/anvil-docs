@@ -2,7 +2,8 @@
 
 Anvil is the Laratechs Internal Developer Platform. Ask it for a service by
 name and it gives you a GitHub repository with a working Go app, CI that
-publishes a versioned container image, and, if you want, somewhere to run it:
+builds a versioned container image, and, if you want, somewhere to run it,
+where CI publishes and deploys that image:
 
 ```
 anvil service create -deploy orders
@@ -10,8 +11,9 @@ anvil service create -deploy orders
 
 That one command:
 
-- creates the `orders` repository from a template, with CI that builds and
-  publishes an image on every merge;
+- creates the `orders` repository from a template, with CI that builds an
+  image on every merge (and publishes it to the deployment's own image
+  repository);
 - gives the service a **deployment**, by default a Cloud Run service in the
   shared GCP project the platform team runs
   ([Running services on Cloud Run](docs/gcp.md));
